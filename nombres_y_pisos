@@ -1,0 +1,46 @@
+import os
+os.system('cls')
+
+registro_de_ingreso_y_egreso = [
+    ['Nadia','Jose'],
+    [5,9]
+]
+
+def validar_nombre():
+    while True:
+        nombre = input("Por favor, ingrese el nombre -->\n")
+        if nombre.isalpha():
+            if nombre in registro_de_ingreso_y_egreso[0]:
+                # buscamos por cada registro de ingreso, el nombre prompt. Te ingresa la posicion y el valor.
+                for index, cada_nombre in enumerate (registro_de_ingreso_y_egreso[0]):
+                    if cada_nombre == nombre:
+                        # encontrado el index del nombre ingresado, eliminamos segun su posicion.
+                        registro_de_ingreso_y_egreso[0].pop(index)
+                        # encontrado el index del nombre ingresado, eliminamos tambien el index de piso asociado.
+                        registro_de_ingreso_y_egreso[1].pop(index)
+            else:
+                registro_de_ingreso_y_egreso[0].append(nombre)
+                validar_piso()
+            break
+        print('Hubo un error, intente de nuevo.')
+    return nombre
+
+def validar_piso():
+    while True:
+        piso = input("Por favor, ingrese el piso -->\n")
+        if piso.isdigit():
+            if piso in registro_de_ingreso_y_egreso[1]:
+                registro_de_ingreso_y_egreso[1].pop(piso)
+            else:
+                registro_de_ingreso_y_egreso[1].append(piso)
+                break
+        print('Hubo un eror, intente de nuevo.')
+    return piso
+
+while True:
+    print(f"Los datos existentes en el sistema son.\nNombre: {registro_de_ingreso_y_egreso[0]}\nPiso: {registro_de_ingreso_y_egreso[1]}")
+    menu = input("Para para salir escriba S, si desea continuar presione enter.\n")
+    if menu.lower() == "s":
+        print("Gracias por usar nuestro programa.")
+        break
+    validar_nombre()
