@@ -1,0 +1,31 @@
+#importo libreria de "datetime"
+from datetime import datetime
+
+# armo mi lista vacía que se irá llenando de mis registros
+registro_de_ingreso_y_egreso = []
+
+def registro(nombre, apellido, piso, dpto):
+# Paso los argumentos a mayuscula para mejor lectura    
+    nombre = nombre.upper()
+    apellido = apellido.upper()
+    piso = piso.upper()
+    dpto = dpto.upper()
+# Horario de ingreso con el formato dd:mm:yy hh:mm:ss
+    horario_ingreso= datetime.now().strftime("%d -%m -%Y %H:%M:%S")
+    
+    registro = (f" El señor/ra {nombre} {apellido}, ha ingresado al piso {piso} departamento {dpto}. Horario de ingreso: {horario_ingreso}")
+    registro_de_ingreso_y_egreso.append(registro)
+    return registro
+
+while True:    
+   nombre= input("Ingrese el nombre --> . Si desea finalizar el ingreso de datos, coloque ´Salir´.")
+   if nombre.lower() == "salir":
+        print("Usted ha salido satisfactoriamente.")
+        break
+   apellido= input("Ingrese el apellido --> ")
+   piso= input("Ingrese piso --> ")
+   dpto = input("Ingrese departamento -->: ")
+   print(registro(nombre, apellido, piso, dpto))
+
+for reg in registro_de_ingreso_y_egreso:
+    print(reg)
