@@ -1,3 +1,6 @@
+# Con el comentario inferior podemos lograr que los acentos no sean un problema en mi programa.
+# -*- coding: utf-8 -*-
+
 import os
 os.system('cls')
 
@@ -9,20 +12,26 @@ registro_de_ingreso_y_egreso = [
 def validar_nombre():
     while True:
         nombre = input("Por favor, ingrese el nombre -->\n")
+        # validamos que el input de nombre sea, efectivamente, solo letras.
         if nombre.isalpha():
             if nombre in registro_de_ingreso_y_egreso[0]:
                 # buscamos por cada registro de ingreso, el nombre prompt. Te ingresa la posicion y el valor.
                 for index, cada_nombre in enumerate (registro_de_ingreso_y_egreso[0]):
+                    # si se encuentra en el index el nombre ingresado correrá el bucle for
                     if cada_nombre == nombre:
                         # encontrado el index del nombre ingresado, eliminamos segun su posicion.
                         registro_de_ingreso_y_egreso[0].pop(index)
                         # encontrado el index del nombre ingresado, eliminamos tambien el index de piso asociado.
                         registro_de_ingreso_y_egreso[1].pop(index)
+            #si no encontramos ese nombre en nuestra lista, se agrega
             else:
                 registro_de_ingreso_y_egreso[0].append(nombre)
+                # corre la función validar_piso para cargar el piso correspondiente al nombre nuevo a registrar
                 validar_piso()
-            break
+            #si se cumple el else, rompemos el bucle (no es estrictamente necesario el else, pero para facilitar la lectura por ahora lo dejamos
+            break 
         print('Hubo un error, intente de nuevo.')
+    # cuando llamemos a la función, retornará la info agregada a las listas
     return nombre
 
 def validar_piso():
@@ -35,12 +44,26 @@ def validar_piso():
                 registro_de_ingreso_y_egreso[1].append(piso)
                 break
         print('Hubo un eror, intente de nuevo.')
+    #cuando llamemos a la función, retornará su resultado 
     return piso
 
 while True:
     print(f"Los datos existentes en el sistema son.\nNombre: {registro_de_ingreso_y_egreso[0]}\nPiso: {registro_de_ingreso_y_egreso[1]}")
+    # menu inicial
     menu = input("Para para salir escriba S, si desea continuar presione enter.\n")
+    # Si el menu es igual a S ( de salir ), se cierra el programa ejecutando el if, sino, corre el programa validar_nombre
     if menu.lower() == "s":
         print("Gracias por usar nuestro programa.")
         break
     validar_nombre()
+
+""" 
+Cosas por ver:
+1- aplicar la importación de JSON para poder guardar nuestra base de datos de personas y piso.
+2- ver si podemos mejorar, achicar, performar nuestro programa.
+3- me parece que hay algo que se puede hacer entre las funciones pero no detecto que ni como
+4- entender BIEN el "index", "enumerate" e "in zip"
+5- No se que es el  "try-except"
+6- No se que es el entorno (scope)
+"""
+
