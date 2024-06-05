@@ -1,31 +1,41 @@
-# Con el comentario inferior podemos lograr que los acentos no sean un problema en mi programa.
+#Con el comentario inferior podemos lograr que los acentos no sean un problema en mi programa.
 # -*- coding: utf-8 -*-
 
 import os
 os.system('cls')
 
-registro_de_ingreso_y_egreso = [
-    ['Nadia','Jose'],
-    [5,9]
-]
+import os.path 
+import json
+
+#Guardar el JSON en un archivo llamado registro.json
+def guardar_registro(Nombres, modo = 'w'):
+    with open('registro.json', mode = modo, encoding='utf-8') as archivo:
+        json.dump(Nombres, archivo, indent=4)
+
+#leer el archivo registro.JSON 
+def cargar_registro():
+    global registro
+    with open('registro.json', 'r', encoding='utf-8') as archivo:
+        registro = json.load(archivo)
 
 def validar_nombre():
     while True:
         nombre = input("Por favor, ingrese el nombre -->\n")
+        nombre = nombre.upper()
         # validamos que el input de nombre sea, efectivamente, solo letras.
         if nombre.isalpha():
-            if nombre in registro_de_ingreso_y_egreso[0]:
+            if nombre in registro['Nombres']:
                 # buscamos por cada registro de ingreso, el nombre prompt. Te ingresa la posicion y el valor.
-                for index, cada_nombre in enumerate (registro_de_ingreso_y_egreso[0]):
+                for index, cada_nombre in enumerate (registro['Nombres']):
                     # si se encuentra en el index el nombre ingresado correrá el bucle for
                     if cada_nombre == nombre:
                         # encontrado el index del nombre ingresado, eliminamos segun su posicion.
-                        registro_de_ingreso_y_egreso[0].pop(index)
+                        registro['Nombres'].pop(index)
                         # encontrado el index del nombre ingresado, eliminamos tambien el index de piso asociado.
-                        registro_de_ingreso_y_egreso[1].pop(index)
+                        registro['Pisos'].pop(index)
             #si no encontramos ese nombre en nuestra lista, se agrega
             else:
-                registro_de_ingreso_y_egreso[0].append(nombre)
+                registro['Nombres'].append(nombre)
                 # corre la función validar_piso para cargar el piso correspondiente al nombre nuevo a registrar
                 validar_piso()
             #si se cumple el else, rompemos el bucle (no es estrictamente necesario el else, pero para facilitar la lectura por ahora lo dejamos
@@ -36,19 +46,34 @@ def validar_nombre():
 
 def validar_piso():
     while True:
-        piso = input("Por favor, ingrese el piso -->\n")
-        if piso.isdigit():
-            if piso in registro_de_ingreso_y_egreso[1]:
-                registro_de_ingreso_y_egreso[1].pop(piso)
-            else:
-                registro_de_ingreso_y_egreso[1].append(piso)
+        try:
+            piso = input("Por favor, ingrese el piso -->\n")
+            print(f"Piso se guarda como: {piso} {type(piso)}")
+            if piso.isdigit():
+                piso = int(piso)
+                print(f"Piso se guarda como: {piso} {type(piso)}")
+                registro['Pisos'].append(piso)
                 break
-        print('Hubo un eror, intente de nuevo.')
-    #cuando llamemos a la función, retornará su resultado 
+            else:
+                print('Hubo un eror, intente de nuevo.')
+                #Si no es un numero, no sale del bucle y se autollama hasta que deje de pifiar
+                validar_piso()
+        except Exception as e:
+            print(f"Se produjo un error inesperado: {e}")
+        #cuando llamemos a la función, retornará su resultado 
     return piso
 
+'''
+##################################################################
+                        PROGRAMA INICIO
+##################################################################
+'''
+
+if os.path.isfile("registro.json"):
+    cargar_registro()
+
 while True:
-    print(f"Los datos existentes en el sistema son.\nNombre: {registro_de_ingreso_y_egreso[0]}\nPiso: {registro_de_ingreso_y_egreso[1]}")
+    print(f"Los datos existentes en el sistema son.\nNombre: {registro['Nombres']}\nPiso: {registro['Pisos']}")
     # menu inicial
     menu = input("Para para salir escriba S, si desea continuar presione enter.\n")
     # Si el menu es igual a S ( de salir ), se cierra el programa ejecutando el if, sino, corre el programa validar_nombre
@@ -56,14 +81,4 @@ while True:
         print("Gracias por usar nuestro programa.")
         break
     validar_nombre()
-
-""" 
-Cosas por ver:
-1- aplicar la importación de JSON para poder guardar nuestra base de datos de personas y piso.
-2- ver si podemos mejorar, achicar, performar nuestro programa.
-3- me parece que hay algo que se puede hacer entre las funciones pero no detecto que ni como
-4- entender BIEN el "index", "enumerate" e "in zip"
-5- No se que es el  "try-except"
-6- No se que es el entorno (scope)
-"""
-
+    guardar_registro(registro)
