@@ -1,0 +1,9 @@
+schema: '2.0'
+stages:
+  declare_dataset:
+    cmd: echo "Declaración formal del dataset"
+    deps:
+    - path: data/telco_churn.csv
+      hash: md5
+      md5: 25e331349d6fc3e8608b1deaf35f4c71
+      size: 882933
