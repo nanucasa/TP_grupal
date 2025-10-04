@@ -1,0 +1,6 @@
+[core]
+    remote = gdrive-remote
+['remote "gdrive-remote"']
+    url = gdrive://1k2phY9kXYX_aoV7BPkw6F-Cww7zrPziL
+    gdrive_use_service_account = true
+    gdrive_service_account_json_file_path = C:\clase 230925\mineria-de-datos-474113-f744f5b1eba8.json
