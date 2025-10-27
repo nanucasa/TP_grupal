@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/dvc_prueba/mlruns/594460903885364777/a52a7565ff4b46f2bd49129835bc1b77/artifacts
+end_time: 1761599786171
+entry_point_name: ''
+experiment_id: '594460903885364777'
+lifecycle_stage: active
+run_id: a52a7565ff4b46f2bd49129835bc1b77
+run_name: smiling-newt-266
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1761599775812
+status: 3
+tags: []
+user_id: nadia

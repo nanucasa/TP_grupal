@@ -1,0 +1,11 @@
+train:
+  C: 1.0
+  max_iter: 1000
+  seed: 42
+  threshold: 0.5
+
+tune:
+  C_grid: [0.01, 0.1, 1.0, 3.0, 10.0]
+  cv: 5
+  scoring: f1
+  max_iter: 1000
