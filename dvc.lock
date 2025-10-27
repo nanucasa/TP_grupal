@@ -37,8 +37,8 @@ stages:
       size: 102550
     - path: src\train.py
       hash: md5
-      md5: db532c8116a06d1f3eb6ea2e81e58c34
-      size: 3413
+      md5: 0672dc656dadd4af20b5d2fd66627e32
+      size: 4166
     params:
       params.yaml:
         train.C: 1.0
@@ -51,7 +51,7 @@ stages:
       size: 224
     - path: models\model.joblib
       hash: md5
-      md5: 3e333af6ddc9a24388af32943bf618bc
+      md5: e214e3248e31b9139eee3b0eb2adcf7e
       size: 1973
   evaluate_test:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
@@ -93,8 +93,8 @@ stages:
       size: 156
     - path: src\tune.py
       hash: md5
-      md5: 3dc9d32a509ff4bd9b28004da533c613
-      size: 3207
+      md5: 79d65aa16f564198a8442828482f0b34
+      size: 3069
     outs:
     - path: artifacts\best_params.json
       hash: md5
