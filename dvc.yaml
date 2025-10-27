@@ -1,0 +1,9 @@
+stages:
+  data_prep:
+    cmd: python src\data_prep.py --input data\raw\telco_churn.csv --outdir 
+      data\processed --seed 42 --test-size 0.2 --val-size 0.1
+    deps:
+    - data\raw\telco_churn.csv
+    - src\data_prep.py
+    outs:
+    - data\processed
