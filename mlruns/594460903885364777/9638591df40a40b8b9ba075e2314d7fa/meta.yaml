@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/dvc_prueba/mlruns/594460903885364777/9638591df40a40b8b9ba075e2314d7fa/artifacts
+end_time: 1761596678496
+entry_point_name: ''
+experiment_id: '594460903885364777'
+lifecycle_stage: active
+run_id: 9638591df40a40b8b9ba075e2314d7fa
+run_name: hilarious-cod-197
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1761596662058
+status: 3
+tags: []
+user_id: nadia

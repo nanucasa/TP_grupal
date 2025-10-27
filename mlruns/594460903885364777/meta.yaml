@@ -1,0 +1,6 @@
+artifact_location: file:///C:/dvc_prueba/mlruns/594460903885364777
+creation_time: 1761596660381
+experiment_id: '594460903885364777'
+last_update_time: 1761596660381
+lifecycle_stage: active
+name: telco_churn_baseline

@@ -1,0 +1,10 @@
+artifact_location: file:///C:/dvc_prueba/mlruns/594460903885364777/models/m-0fab482e22db4286946457615bf2f31b/artifacts
+creation_timestamp: 1761596668455
+experiment_id: '594460903885364777'
+last_updated_timestamp: 1761596678473
+model_id: m-0fab482e22db4286946457615bf2f31b
+model_type: null
+name: model
+source_run_id: 9638591df40a40b8b9ba075e2314d7fa
+status: 2
+status_message: null
