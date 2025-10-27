@@ -10,11 +10,37 @@ stages:
       size: 882933
     - path: src\data_prep.py
       hash: md5
-      md5: b3c30e20e2789c46a88856b924df6221
-      size: 4609
+      md5: aefaa2cac76a71bb4f666e6c300b1912
+      size: 4989
     outs:
     - path: data\processed
       hash: md5
-      md5: 064eb34cde7fb506ce4ed983b2273a2c.dir
+      md5: 614060690e60b1ab4f301e442dd7136f.dir
       size: 1023708
       nfiles: 4
+  train:
+    cmd: python src\train.py --train data\processed\train.csv --valid 
+      data\processed\valid.csv --out-model models\model.joblib --metrics 
+      metrics.json --C 1.0 --max-iter 1000 --seed 42
+    deps:
+    - path: data\processed\train.csv
+      hash: md5
+      md5: 8f5c35515f9f2ed31d9555ba58b1579b
+      size: 715729
+    - path: data\processed\valid.csv
+      hash: md5
+      md5: d33f3c1653cac4c9d9cc14227f77ee79
+      size: 102550
+    - path: src\train.py
+      hash: md5
+      md5: bcd4099686c4007cbff2bd1e1dbab886
+      size: 3084
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: e304825870467993bc163fdd4a5a4c2b
+      size: 223
+    - path: models\model.joblib
+      hash: md5
+      md5: 24057234503bb32a2906061cbc751d6e
+      size: 1973

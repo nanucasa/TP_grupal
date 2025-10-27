@@ -7,3 +7,16 @@ stages:
     - src\data_prep.py
     outs:
     - data\processed
+  train:
+    cmd: python src\train.py --train data\processed\train.csv --valid 
+      data\processed\valid.csv --out-model models\model.joblib --metrics 
+      metrics.json --C 1.0 --max-iter 1000 --seed 42
+    deps:
+    - data\processed\train.csv
+    - data\processed\valid.csv
+    - src\train.py
+    outs:
+    - models\model.joblib
+    metrics:
+    - metrics.json:
+        cache: false
