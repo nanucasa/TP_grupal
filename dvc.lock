@@ -44,3 +44,24 @@ stages:
       hash: md5
       md5: 24057234503bb32a2906061cbc751d6e
       size: 1973
+  evaluate_test:
+    cmd: python src\evaluate.py --test data\processed\test.csv --model 
+      models\model.joblib --metrics-out metrics_test.json
+    deps:
+    - path: data\processed\test.csv
+      hash: md5
+      md5: 504c23a16229ee2680239bd7f5206d4c
+      size: 204688
+    - path: models\model.joblib
+      hash: md5
+      md5: 24057234503bb32a2906061cbc751d6e
+      size: 1973
+    - path: src\evaluate.py
+      hash: md5
+      md5: e549b5af41842b01ffbb9747cd95af3a
+      size: 1597
+    outs:
+    - path: metrics_test.json
+      hash: md5
+      md5: c4a31a822e1bb54f304c46e26a12b355
+      size: 186

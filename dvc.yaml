@@ -20,3 +20,13 @@ stages:
     metrics:
     - metrics.json:
         cache: false
+  evaluate_test:
+    cmd: python src\evaluate.py --test data\processed\test.csv --model 
+      models\model.joblib --metrics-out metrics_test.json
+    deps:
+    - data\processed\test.csv
+    - models\model.joblib
+    - src\evaluate.py
+    metrics:
+    - metrics_test.json:
+        cache: false
