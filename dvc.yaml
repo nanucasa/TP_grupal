@@ -1,5 +1,0 @@
-stages:
-  declare_dataset:
-    cmd: echo "Dataset formalizado"
-    outs:
-      - data/telco_churn.csv
