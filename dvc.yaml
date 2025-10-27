@@ -10,8 +10,9 @@ stages:
   train:
     cmd: python src\train.py --train data\processed\train.csv --valid 
       data\processed\valid.csv --out-model models\model.joblib --metrics 
-      metrics.json --C 1.0 --max-iter 1000 --seed 42
+      metrics.json --best-params artifacts\best_params.json --params params.yaml
     deps:
+    - artifacts\best_params.json
     - data\processed\train.csv
     - data\processed\valid.csv
     - src\train.py
@@ -20,6 +21,10 @@ stages:
     metrics:
     - metrics.json:
         cache: false
+    params:
+    - train.C
+    - train.max_iter
+    - train.seed
   evaluate_test:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
       models\model.joblib --metrics-out metrics_test.json
@@ -29,4 +34,18 @@ stages:
     - src\evaluate.py
     metrics:
     - metrics_test.json:
+        cache: false
+  tune:
+    cmd: python src\tune.py --train data\processed\train.csv --valid 
+      data\processed\valid.csv --params params.yaml --best-out 
+      artifacts\best_params.json --metrics-out metrics_tune.json
+    deps:
+    - data\processed\train.csv
+    - data\processed\valid.csv
+    - params.yaml
+    - src\tune.py
+    outs:
+    - artifacts\best_params.json
+    metrics:
+    - metrics_tune.json:
         cache: false

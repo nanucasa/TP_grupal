@@ -21,8 +21,12 @@ stages:
   train:
     cmd: python src\train.py --train data\processed\train.csv --valid 
       data\processed\valid.csv --out-model models\model.joblib --metrics 
-      metrics.json --C 1.0 --max-iter 1000 --seed 42
+      metrics.json --best-params artifacts\best_params.json --params params.yaml
     deps:
+    - path: artifacts\best_params.json
+      hash: md5
+      md5: 35999a62ede63cb3e458d4c11a6101af
+      size: 38
     - path: data\processed\train.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
@@ -33,16 +37,21 @@ stages:
       size: 102550
     - path: src\train.py
       hash: md5
-      md5: bcd4099686c4007cbff2bd1e1dbab886
-      size: 3084
+      md5: db532c8116a06d1f3eb6ea2e81e58c34
+      size: 3413
+    params:
+      params.yaml:
+        train.C: 1.0
+        train.max_iter: 1000
+        train.seed: 42
     outs:
     - path: metrics.json
       hash: md5
-      md5: e304825870467993bc163fdd4a5a4c2b
-      size: 223
+      md5: 440a0c42ab8a2dcac8fd289c5be9313a
+      size: 224
     - path: models\model.joblib
       hash: md5
-      md5: 24057234503bb32a2906061cbc751d6e
+      md5: 3e333af6ddc9a24388af32943bf618bc
       size: 1973
   evaluate_test:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
@@ -54,7 +63,7 @@ stages:
       size: 204688
     - path: models\model.joblib
       hash: md5
-      md5: 24057234503bb32a2906061cbc751d6e
+      md5: 3e333af6ddc9a24388af32943bf618bc
       size: 1973
     - path: src\evaluate.py
       hash: md5
@@ -63,5 +72,35 @@ stages:
     outs:
     - path: metrics_test.json
       hash: md5
-      md5: c4a31a822e1bb54f304c46e26a12b355
-      size: 186
+      md5: aa3a9a214fa7e078469ef9fdfdfb5c63
+      size: 185
+  tune:
+    cmd: python src\tune.py --train data\processed\train.csv --valid 
+      data\processed\valid.csv --params params.yaml --best-out 
+      artifacts\best_params.json --metrics-out metrics_tune.json
+    deps:
+    - path: data\processed\train.csv
+      hash: md5
+      md5: 8f5c35515f9f2ed31d9555ba58b1579b
+      size: 715729
+    - path: data\processed\valid.csv
+      hash: md5
+      md5: d33f3c1653cac4c9d9cc14227f77ee79
+      size: 102550
+    - path: params.yaml
+      hash: md5
+      md5: 2a806df955a2ccae0d113b4568a9c8d2
+      size: 156
+    - path: src\tune.py
+      hash: md5
+      md5: 3dc9d32a509ff4bd9b28004da533c613
+      size: 3207
+    outs:
+    - path: artifacts\best_params.json
+      hash: md5
+      md5: 35999a62ede63cb3e458d4c11a6101af
+      size: 38
+    - path: metrics_tune.json
+      hash: md5
+      md5: 37cb809e039c09bc348f9e3301e59cff
+      size: 283
