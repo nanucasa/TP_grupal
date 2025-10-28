@@ -210,3 +210,17 @@ Balanceo/threshold tuning.
 
 Reporte en docs/ versionado con DVC (manteniendo este README en Git para tener referencia de hasta donde lleguamos y a donde vamos. Pues es un trabajo por etapas.).
 
+
+<!-- METRICS_START -->
+
+## Resultados (Benchmark)
+
+_Las métricas provienen de los JSON versionados por DVC (valid/test)._
+
+| Model | Split | Threshold | Accuracy | Precision | Recall | F1 | ROC_AUC | PR_AP |
+|---|---|---|---|---|---|---|---|---|
+| LogReg | valid | 0.4542 | 0.6520 | 0.5134 | 0.7934 | 0.6234 | 0.2582 | 0.6001 |
+| LogReg | test | 0.4542 | 0.6330 | 0.4969 | 0.7772 | 0.6062 | 0.7362 | 0.5989 |
+| RF | valid |  | 0.6650 | 0.5277 | 0.7355 | 0.6145 |  |  |
+| RF | test | 0.4542 | 0.5965 | 0.4691 | 0.8363 | 0.6011 | 0.7316 | 0.6071 |
+<!-- METRICS_END -->
