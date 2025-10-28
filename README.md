@@ -1,215 +1,79 @@
-EL TP GRUPAL MÁS LARGO DE NUESTRAS VIDAS
+# Proyecto: Telco Churn – Pipeline reproducible (DVC + MLflow)
+
+Pipeline de Minería de Datos con **DVC** (datos/artefactos), **MLflow** (experimentos y registro de modelos), y control de versiones en **Git** (GitHub + DagsHub).
+
+---
+
+## Requisitos
+- Python/Conda (entorno: `tp_grupal`)
+- Instalar dependencias del repo:
+  ```bash
+  pip install -r requirements.txt
 
 
+ESTRUCTURA DE NUESTRAS CARPETAS
 
-Telco Churn (DVC + MLflow + Git/GitHub + DagsHub)
-
-Objetivo: Pipeline reproducible para predicción de churn con:
-
-
-
-DVC para orquestación y versionado de datos/modelos.
-
-
-
-Git/GitHub para código y metadatos.
-
-
-
-DagsHub como espejo (y MLflow opcional).
-
-
-
-scikit-learn como baseline (Logistic Regression).
-
-
-
-Entorno:
-
-Windows + Python 3.11 (conda tp\_grupal)
-
-
-
-Dependencias en requirements.txt (incluye pandas, numpy, scikit-learn, mlflow, dvc, etc.)
-
-
-
-Estructura principal:
-
-C:\\dvc\_prueba
-
+C:\dvc_prueba
 ├─ data
-
-│  ├─ raw\\ telco\_churn.csv
-
-│  └─ processed\\ {train.csv, valid.csv, test.csv, features.json}
-
-├─ src\\ {data\_prep.py, train.py, evaluate.py}
-
-├─ models\\ model.joblib
-
-├─ artifacts\\ best\_params.json   (si tuning)
-
-├─ metrics.json                  (valid)
-
-├─ metrics\_test.json             (test)
-
-├─ params.yaml                   (si tuning)
-
-├─ dvc.yaml, dvc.lock
-
+│  ├─ raw\            # datos crudos (DVC)
+│  └─ processed\      # datos procesados (DVC)
+├─ models\            # modelos entrenados (.joblib, DVC)
+├─ artifacts\         # parámetros/umbrales (JSON, Git)
+├─ predictions\       # inferencias (CSV, DVC)
+├─ reports\           # gráficos (PNG, DVC)
+├─ src\               # código (Python, Git)
+├─ scripts\           # utilidades (Git)
+├─ dvc.yaml / dvc.lock
+├─ params.yaml
 └─ README.md
 
 
+STAGES DEL PIPELINE DVC
 
-Remotos
-
-
-
-GitHub (origin): nanucasa/TP\_grupal
-
+data_prep
+  ├─ tune ──► train ──► threshold ──► predict_test ──► evaluate_test
+  └─ tune_rf ──► train_rf ──► predict_test_rf ──► evaluate_test_rf
 
 
-DagsHub (dagshub): espejo del repo
-
-DVC remote (data): Google Drive (service account en .dvc/config)
-
-
-
-Pipeline (DVC)
-
-
-
-data\_prep
-
-Cmd:
-
-python src\\data\_prep.py --input data\\raw\\telco\_churn.csv --outdir data\\processed --seed 42 --test-size 0.2 --val-size 0.1
-
-Out: data/processed/{train.csv, valid.csv, test.csv, features.json}
-
-Tareas: limpieza, normalización de columnas, casting numéricos, one-hot, splits estratificados.
-
-
-
-train (scikit-learn + MLflow)
-
-Cmd:
-
-python src\\train.py --train data\\processed\\train.csv --valid data\\processed\\valid.csv --out-model models\\model.joblib --metrics metrics.json --best-params artifacts\\best\_params.json --params params.yaml
-
-Out: models/model.joblib, metrics.json (valid).
-
-Nota: usa class\_weight=balanced. Trackeo MLflow local o DagsHub.
-
-
-
-evaluate\_test
-
-Cmd:
-
-python src\\evaluate.py --test data\\processed\\test.csv --model models\\model.joblib --metrics-out metrics\_test.json
-
-Out: metrics\_test.json.
-
-
-
-tune (GridSearchCV)
-
-Cmd:
-
-python src\\tune.py --train data\\processed\\train.csv --valid data\\processed\\valid.csv --params params.yaml --best-out artifacts\\best\_params.json --metrics-out metrics\_tune.json
-
-Out: artifacts/best\_params.json, metrics\_tune.json.
-
-params.yaml controla grids y parámetros; train los rastrea con -p.
-
-
-
-Ejecutar/Reproducir
-
-conda activate tp\_grupal
+CÓMO REPRODUCIR EL PIPELINE
 
 dvc repro
-
-dvc dag
-
 dvc metrics show
 
+COMO EJECUTAR ETAPAS PUNTUALES
+
+dvc repro -f tune
+dvc repro -f train
+dvc repro -f threshold
+dvc repro -f evaluate_test
+dvc repro -f tune_rf
+dvc repro -f train_rf
+dvc repro -f evaluate_test_rf
+dvc repro -f predict_test
+dvc repro -f predict_test_rf
 
 
-MLflow
+MLflow (tracking local)
+CÓMO INICIAR UI LOCAL: 
 
-Local: crea mlruns/ (ignorado en Git).
+mlflow ui --backend-store-uri sqlite:///C:/dvc_prueba/mlflow.db --default-artifact-root file:///C:/dvc_prueba/mlruns --host 127.0.0.1 --port 5001
 
+UI: http://127.0.0.1:5001
 
+Experimentos: telco_churn_tune, telco_churn_baseline, telco_churn_threshold, telco_churn_eval, telco_churn_tune_rf, telco_churn_baseline_rf
 
-DagsHub (recomendado para UI):
+Model Registry: TelcoChurn_LogReg, TelcoChurn_RF (Staging)
 
-set MLFLOW\_TRACKING\_URI=https://dagshub.com/nanucasa/TP\_grupal.mlflow
+DATOS Y ARTEFACTOS:
 
-set MLFLOW\_TRACKING\_USERNAME=nanucasa
+DVC: datasets procesados, modelos (models/*.joblib), predicciones (predictions/*.csv), y gráficos (reports/*.png).
 
-set MLFLOW\_TRACKING\_PASSWORD=<TOKEN\_DAGSHUB>
-
-
-
-Flujo de pushes (orden acordado)
-
-1\) DagsHub
-
-git push -u dagshub main
-
-
-
-2\) GitHub (Credential Manager, SIEMPRE)
-
-git remote set-url origin https://github.com/nanucasa/TP\_grupal.git
-
-git config --global credential.helper manager
-
-git push -u origin main --verbose
-
-
-
-3\) Datos al remoto DVC (GDrive)
-
+Git: código (src/, scripts/), configuración (params.yaml), métricas (metrics_*.json) y JSONs chicos en artifacts/.
 dvc push
 
+RESULTADOS (Benchmark)
 
-
-Comparar métricas:
-
-dvc metrics show
-
-dvc metrics diff
-
-
-
-Alcance actual
-
-Pipeline: data\_prep → train → evaluate\_test (+ tune opcional).
-
-
-
-Modelos y métricas versionado:
-
-Mirroring a DagsHub HOTED y tracking con MLflow.
-
-
-
-Próximos pasos
-
-Otros modelos (árboles, XGBoost/LightGBM).
-
-
-
-Balanceo/threshold tuning.
-
-
-
-Reporte en docs/ versionado con DVC (manteniendo este README en Git para tener referencia de hasta donde lleguamos y a donde vamos. Pues es un trabajo por etapas.).
-
+Esta tabla se actualiza automáticamente con python scripts/update_readme_metrics.py.
 
 <!-- METRICS_START -->
 
@@ -224,3 +88,33 @@ _Las métricas provienen de los JSON versionados por DVC (valid/test)._
 | RF | valid |  | 0.6650 | 0.5277 | 0.7355 | 0.6145 |  |  |
 | RF | test | 0.4542 | 0.5965 | 0.4691 | 0.8363 | 0.6011 | 0.7316 | 0.6071 |
 <!-- METRICS_END -->
+
+FLUJO DE LOS COMMIT Y EL PUSH 
+
+Versionar cambios en Git:
+git add .
+git commit -m "feat/fix: descripción corta del cambio"
+
+Push a DagsHub (primero):
+git push -u dagshub main
+
+Push a GitHub (Credential Manager):
+git remote set-url origin https://github.com/nanucasa/TP_grupal.git
+git config --global credential.helper manager
+git push -u origin main --verbose
+
+Subir artefactos DVC:
+dvc push
+
+Scripts auxiliares:
+scripts/update_readme_metrics.py: actualiza la sección de métricas del README leyendo metrics_*.json y artifacts/best_threshold.json.
+
+Reproducibilidad rápida
+# Procesar datos, entrenar, sintonizar, umbral, evaluar, predecir
+dvc repro
+
+# Actualizar tabla de métricas en README
+python scripts/update_readme_metrics.py
+
+# Ver métricas
+dvc metrics show
