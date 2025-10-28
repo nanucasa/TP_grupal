@@ -29,6 +29,7 @@ stages:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
       models\model.joblib --metrics-out metrics_test.json
     deps:
+    - artifacts\best_threshold.json
     - data\processed\test.csv
     - models\model.joblib
     - src\evaluate.py

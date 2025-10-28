@@ -51,29 +51,33 @@ stages:
       size: 224
     - path: models\model.joblib
       hash: md5
-      md5: ed3a6a07bcf55464804970d8e94a66c4
+      md5: 636a0e94896d6158a2231dc1243060aa
       size: 1973
   evaluate_test:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
       models\model.joblib --metrics-out metrics_test.json
     deps:
+    - path: artifacts\best_threshold.json
+      hash: md5
+      md5: 11edafd393b622bd4d7085d16a8c9ded
+      size: 44
     - path: data\processed\test.csv
       hash: md5
       md5: 504c23a16229ee2680239bd7f5206d4c
       size: 204688
     - path: models\model.joblib
       hash: md5
-      md5: 048318e8eb05148728e4f3262ecdbf01
+      md5: 636a0e94896d6158a2231dc1243060aa
       size: 1973
     - path: src\evaluate.py
       hash: md5
-      md5: 2bfe1404f11298ccbc1c8db9f7e2cd7b
-      size: 1579
+      md5: fdda023f595d55dae270d990e5445037
+      size: 2973
     outs:
     - path: metrics_test.json
       hash: md5
-      md5: aa3a9a214fa7e078469ef9fdfdfb5c63
-      size: 185
+      md5: c74c9b2a9adcaf60f08cd6b9871ee0f4
+      size: 256
   tune:
     cmd: python src\tune.py --train data\processed\train.csv --valid 
       data\processed\valid.csv --params params.yaml --best-out 
@@ -141,7 +145,7 @@ stages:
       size: 102550
     - path: models\model.joblib
       hash: md5
-      md5: ed3a6a07bcf55464804970d8e94a66c4
+      md5: 636a0e94896d6158a2231dc1243060aa
       size: 1973
     - path: src\threshold.py
       hash: md5
