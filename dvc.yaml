@@ -49,3 +49,30 @@ stages:
         cache: false
     - metrics_tune.json:
         cache: false
+  predict_test:
+    cmd: python src\predict.py --input data\processed\test.csv --model 
+      models\model.joblib --output predictions\preds_test.csv
+    deps:
+    - artifacts\best_threshold.json
+    - data\processed\test.csv
+    - models\model.joblib
+    - src\predict.py
+    outs:
+    - predictions\preds_test.csv
+  threshold:
+    cmd: python src\threshold.py --valid data\processed\valid.csv --model 
+      models\model.joblib --out-json artifacts\best_threshold.json --metrics-out
+      metrics_threshold.json --roc-out reports\roc_curve.png --pr-out 
+      reports\pr_curve.png
+    deps:
+    - data\processed\valid.csv
+    - models\model.joblib
+    - src\threshold.py
+    outs:
+    - reports\pr_curve.png
+    - reports\roc_curve.png
+    metrics:
+    - artifacts\best_threshold.json:
+        cache: false
+    - metrics_threshold.json:
+        cache: false

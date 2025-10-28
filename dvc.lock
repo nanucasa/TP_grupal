@@ -51,7 +51,7 @@ stages:
       size: 224
     - path: models\model.joblib
       hash: md5
-      md5: 048318e8eb05148728e4f3262ecdbf01
+      md5: ed3a6a07bcf55464804970d8e94a66c4
       size: 1973
   evaluate_test:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
@@ -104,3 +104,63 @@ stages:
       hash: md5
       md5: 37cb809e039c09bc348f9e3301e59cff
       size: 283
+  predict_test:
+    cmd: python src\predict.py --input data\processed\test.csv --model 
+      models\model.joblib --output predictions\preds_test.csv
+    deps:
+    - path: artifacts\best_threshold.json
+      hash: md5
+      md5: 11edafd393b622bd4d7085d16a8c9ded
+      size: 44
+    - path: data\processed\test.csv
+      hash: md5
+      md5: 504c23a16229ee2680239bd7f5206d4c
+      size: 204688
+    - path: models\model.joblib
+      hash: md5
+      md5: ed3a6a07bcf55464804970d8e94a66c4
+      size: 1973
+    - path: src\predict.py
+      hash: md5
+      md5: d062f3ec68a89efa2b321776425beb88
+      size: 1740
+    outs:
+    - path: predictions\preds_test.csv
+      hash: md5
+      md5: 6106bac0055fff4091743986526e47fe
+      size: 243063
+  threshold:
+    cmd: python src\threshold.py --valid data\processed\valid.csv --model 
+      models\model.joblib --out-json artifacts\best_threshold.json --metrics-out
+      metrics_threshold.json --roc-out reports\roc_curve.png --pr-out 
+      reports\pr_curve.png
+    deps:
+    - path: data\processed\valid.csv
+      hash: md5
+      md5: d33f3c1653cac4c9d9cc14227f77ee79
+      size: 102550
+    - path: models\model.joblib
+      hash: md5
+      md5: ed3a6a07bcf55464804970d8e94a66c4
+      size: 1973
+    - path: src\threshold.py
+      hash: md5
+      md5: 71e2e6bb6a7306312586cda7c1de76a4
+      size: 4262
+    outs:
+    - path: artifacts\best_threshold.json
+      hash: md5
+      md5: 11edafd393b622bd4d7085d16a8c9ded
+      size: 44
+    - path: metrics_threshold.json
+      hash: md5
+      md5: 12944f9e35b28d325d3acdae8c9500e8
+      size: 230
+    - path: reports\pr_curve.png
+      hash: md5
+      md5: f0d17ca82200ce04bf87d4c1ee169af4
+      size: 20959
+    - path: reports\roc_curve.png
+      hash: md5
+      md5: 387ba5a3156416cf4ba3e491c9390a3f
+      size: 21061
