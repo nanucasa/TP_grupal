@@ -37,8 +37,8 @@ stages:
       size: 102550
     - path: src\train.py
       hash: md5
-      md5: 1f997940e2245538ea21343a36a33825
-      size: 4588
+      md5: 6b4a402b8d1bcf0676f65bdf3d0befd4
+      size: 4349
     params:
       params.yaml:
         train.C: 1.0
@@ -51,8 +51,8 @@ stages:
       size: 224
     - path: models\model.joblib
       hash: md5
-      md5: 39f0d75a7b356fcfb17a1bbf9d2beeec
-      size: 1973
+      md5: 95745aa7ecee96a9eb9ce8bcea139ca7
+      size: 1921
   evaluate_test:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
       models\model.joblib --metrics-out metrics_test.json
@@ -222,8 +222,8 @@ stages:
       size: 392
     - path: src\train_rf.py
       hash: md5
-      md5: f35518fb575425c0951cab5091f5fe35
-      size: 4343
+      md5: 5b33c7e164067f89cc28bb8f82bdeb76
+      size: 4533
     outs:
     - path: metrics_rf.json
       hash: md5
@@ -231,8 +231,8 @@ stages:
       size: 263
     - path: models\model_rf.joblib
       hash: md5
-      md5: 14afcaf8276027fa690e3e45ef173149
-      size: 1576365
+      md5: e2792ca8cb75172aac35c6b9c336255d
+      size: 1576313
   evaluate_test_rf:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
       models\model_rf.joblib --metrics-out metrics_test_rf.json
