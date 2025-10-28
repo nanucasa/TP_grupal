@@ -44,8 +44,8 @@ stages:
     - data\processed\valid.csv
     - params.yaml
     - src\tune.py
-    outs:
-    - artifacts\best_params.json
     metrics:
+    - artifacts\best_params.json:
+        cache: false
     - metrics_tune.json:
         cache: false

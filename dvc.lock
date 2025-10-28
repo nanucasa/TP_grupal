@@ -63,12 +63,12 @@ stages:
       size: 204688
     - path: models\model.joblib
       hash: md5
-      md5: 3e333af6ddc9a24388af32943bf618bc
+      md5: 048318e8eb05148728e4f3262ecdbf01
       size: 1973
     - path: src\evaluate.py
       hash: md5
-      md5: e549b5af41842b01ffbb9747cd95af3a
-      size: 1597
+      md5: 2bfe1404f11298ccbc1c8db9f7e2cd7b
+      size: 1579
     outs:
     - path: metrics_test.json
       hash: md5
