@@ -1,1 +1,2 @@
-mlruns/echo mlflow.db
+mlruns/
+mlflow.db
