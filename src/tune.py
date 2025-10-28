@@ -1,76 +1,94 @@
-# src/tune.py
-import argparse, os, json
-import numpy as np, pandas as pd
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+# Tuning para LogReg. Soporta holdout o CV (param tune.cv). Guarda mejores params y métricas.
+import argparse, json, os
+import numpy as np, pandas as pd, yaml
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-import mlflow, mlflow.sklearn
+from sklearn.metrics import f1_score
+from sklearn.model_selection import StratifiedKFold
+import mlflow
 
-def load_xy(csv, target="churn"):
-    df = pd.read_csv(csv)
+def load_xy(path, target="churn"):
+    df = pd.read_csv(path)
     y = df[target].astype(int).to_numpy()
-    X = df.drop(columns=[target]).to_numpy(dtype=float)
+    X = df.drop(columns=[target])
     return X, y
+
+def f1_from_model(clf, X, y):
+    if hasattr(clf, "predict_proba"):
+        p = clf.predict_proba(X)[:, 1]
+    else:
+        s = clf.decision_function(X).astype(float)
+        s = (s - s.min()) / (s.max() - s.min() + 1e-12)
+        p = s
+    yhat = (p >= 0.5).astype(int)
+    return f1_score(y, yhat, zero_division=0)
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--train", required=True)
     ap.add_argument("--valid", required=True)
-    ap.add_argument("--params", required=True)         # params.yaml leído por DVC, pero lo pasamos para dependencia
-    ap.add_argument("--best-out", required=True)       # artifacts/best_params.json
-    ap.add_argument("--metrics-out", required=True)    # metrics_tune.json
+    ap.add_argument("--params", required=True)       # params.yaml
+    ap.add_argument("--best-out", required=True)     # artifacts\best_params.json
+    ap.add_argument("--metrics-out", required=True)  # metrics_tune.json
     args = ap.parse_args()
 
-    # Cargar parámetros desde params.yaml (DVC registrará el cambio)
-    import yaml
     with open(args.params, "r", encoding="utf-8") as f:
         P = yaml.safe_load(f)
-    C_grid = P["tune"]["C_grid"]
-    cv = int(P["tune"]["cv"])
-    scoring = str(P["tune"]["scoring"])
-    max_iter = int(P["tune"]["max_iter"])
+    T = P.get("tune", {})
+    C_grid = T.get("C_grid", [0.01, 0.1, 1.0, 10.0])
+    max_iter_grid = T.get("max_iter_grid", [1000])
+    cv = int(T.get("cv", 1))  # <— default si no está en YAML
+    seed = int(P.get("train", {}).get("seed", 42))
 
     Xtr, ytr = load_xy(args.train)
     Xva, yva = load_xy(args.valid)
 
-    pipe = Pipeline([
-        ("scaler", StandardScaler()),
-        ("clf", LogisticRegression(max_iter=max_iter, solver="lbfgs",
-                                   penalty="l2", class_weight="balanced", random_state=42))
-    ])
-    grid = {"clf__C": C_grid}
+    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5001"))
+    exp_name = os.environ.get("MLFLOW_EXPERIMENT_NAME", "telco_churn_tune")
+    mlflow.set_experiment(exp_name)
 
-    mlflow.set_experiment("telco_churn_tune")
-    with mlflow.start_run():
-        gcv = GridSearchCV(pipe, grid, scoring=scoring, cv=cv, n_jobs=-1, refit=True)
-        gcv.fit(Xtr, ytr)
+    best = {"score": -1.0, "params": None}
 
-        best_C = float(gcv.best_params_["clf__C"])
-        best = gcv.best_estimator_
+    for C in C_grid:
+        for mi in max_iter_grid:
+            params = dict(C=float(C), max_iter=int(mi), solver="liblinear", random_state=seed)
+            with mlflow.start_run():
+                mlflow.log_params(params)
 
-        prob = best.predict_proba(Xva)[:, 1]
-        yhat = (prob >= 0.5).astype(int)
-        metrics = {
-            "accuracy": float(accuracy_score(yva, yhat)),
-            "precision": float(precision_score(yva, yhat, zero_division=0)),
-            "recall": float(recall_score(yva, yhat, zero_division=0)),
-            "f1": float(f1_score(yva, yhat, zero_division=0)),
-        }
+                if cv > 1:
+                    skf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=seed)
+                    scores = []
+                    for tr_idx, va_idx in skf.split(Xtr, ytr):
+                        clf = LogisticRegression(**params)
+                        clf.fit(Xtr.iloc[tr_idx], ytr[tr_idx])
+                        scores.append(f1_from_model(clf, Xtr.iloc[va_idx], ytr[va_idx]))
+                    f1_cv = float(np.mean(scores))
+                    mlflow.log_metric("valid_f1_cv", f1_cv)
 
-        os.makedirs(os.path.dirname(args.best_out), exist_ok=True)
-        with open(args.best_out, "w", encoding="utf-8") as f:
-            json.dump({"C": best_C, "max_iter": max_iter}, f, ensure_ascii=False, indent=2)
-        with open(args.metrics_out, "w", encoding="utf-8") as f:
-            json.dump({"valid": metrics, "grid": {"C": C_grid, "cv": cv, "scoring": scoring}},
-                      f, ensure_ascii=False, indent=2)
+                    # también reporto holdout (opcional)
+                    clf = LogisticRegression(**params)
+                    clf.fit(Xtr, ytr)
+                    f1_holdout = float(f1_from_model(clf, Xva, yva))
+                    mlflow.log_metric("valid_f1_holdout", f1_holdout)
+                    score_use = f1_cv
+                else:
+                    clf = LogisticRegression(**params)
+                    clf.fit(Xtr, ytr)
+                    f1_holdout = float(f1_from_model(clf, Xva, yva))
+                    mlflow.log_metric("valid_f1", f1_holdout)
+                    score_use = f1_holdout
 
-        mlflow.log_params({"grid_C": C_grid, "cv": cv, "scoring": scoring, "max_iter": max_iter})
-        mlflow.log_metrics(metrics)
-        mlflow.log_artifact(args.best_out, artifact_path="tuning")
-        mlflow.log_artifact(args.metrics_out, artifact_path="tuning")
-        print(f"[OK] tune -> best C={best_C} | valid f1={metrics['f1']:.4f}")
+                if score_use > best["score"]:
+                    best["score"] = score_use
+                    best["params"] = {"C": params["C"], "max_iter": params["max_iter"]}
+
+    os.makedirs(os.path.dirname(args.best_out), exist_ok=True)
+    with open(args.best_out, "w", encoding="utf-8") as f:
+        json.dump(best["params"], f, ensure_ascii=False, indent=2)
+
+    with open(args.metrics_out, "w", encoding="utf-8") as f:
+        json.dump({"best_valid_f1": best["score"], "best_params": best["params"], "cv": cv}, f, ensure_ascii=False, indent=2)
+
+    print(f"[OK] tune -> best {best['params']} | valid f1={best['score']:.4f} | cv={cv}")
 
 if __name__ == "__main__":
     main()
