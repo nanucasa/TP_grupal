@@ -258,3 +258,129 @@ stages:
       hash: md5
       md5: af05d7b06a0f23e899c420b314c3f02c
       size: 258
+  tune_xgb:
+    cmd: python src\tune_xgb.py --train data\processed\train.csv --valid 
+      data\processed\valid.csv --params params.yaml --best-out 
+      artifacts\best_params_xgb.json --metrics-out metrics_tune_xgb.json
+    deps:
+    - path: data\processed\train.csv
+      hash: md5
+      md5: 8f5c35515f9f2ed31d9555ba58b1579b
+      size: 715729
+    - path: data\processed\valid.csv
+      hash: md5
+      md5: d33f3c1653cac4c9d9cc14227f77ee79
+      size: 102550
+    - path: params.yaml
+      hash: md5
+      md5: 55cecc886671194e85d111e14bb00daf
+      size: 665
+    - path: src\tune_xgb.py
+      hash: md5
+      md5: 044e2f84f0326eb3c126937252450ef1
+      size: 3088
+    outs:
+    - path: artifacts\best_params_xgb.json
+      hash: md5
+      md5: 5292a78f760cf7607db0069a05f83a4d
+      size: 237
+    - path: metrics_tune_xgb.json
+      hash: md5
+      md5: 7f26a71f3eeb4e6d07fff2ba43bda940
+      size: 322
+  train_xgb:
+    cmd: python src\train_xgb.py --train data\processed\train.csv --valid 
+      data\processed\valid.csv --out-model models\model_xgb.joblib --metrics 
+      metrics_xgb.json --best-params artifacts\best_params_xgb.json --params 
+      params.yaml
+    deps:
+    - path: artifacts\best_params_xgb.json
+      hash: md5
+      md5: 5292a78f760cf7607db0069a05f83a4d
+      size: 237
+    - path: data\processed\train.csv
+      hash: md5
+      md5: 8f5c35515f9f2ed31d9555ba58b1579b
+      size: 715729
+    - path: data\processed\valid.csv
+      hash: md5
+      md5: d33f3c1653cac4c9d9cc14227f77ee79
+      size: 102550
+    - path: params.yaml
+      hash: md5
+      md5: 55cecc886671194e85d111e14bb00daf
+      size: 665
+    - path: src\train_xgb.py
+      hash: md5
+      md5: adbd9987afbb3c968b531900dbefb147
+      size: 3550
+    outs:
+    - path: metrics_xgb.json
+      hash: md5
+      md5: e18573c024ac686f5dbc507fcab1fce8
+      size: 424
+    - path: models\model_xgb.joblib
+      hash: md5
+      md5: d35a1a2e10a839c822d69cefde571a6a
+      size: 353662
+  threshold_xgb:
+    cmd: python src\threshold.py --valid data\processed\valid.csv --model 
+      models\model_xgb.joblib --out-json artifacts\best_threshold_xgb.json 
+      --metrics-out metrics_threshold_xgb.json --roc-out 
+      reports\roc_curve_xgb.png --pr-out reports\pr_curve_xgb.png
+    deps:
+    - path: data\processed\valid.csv
+      hash: md5
+      md5: d33f3c1653cac4c9d9cc14227f77ee79
+      size: 102550
+    - path: models\model_xgb.joblib
+      hash: md5
+      md5: d35a1a2e10a839c822d69cefde571a6a
+      size: 353662
+    - path: src\threshold.py
+      hash: md5
+      md5: 71e2e6bb6a7306312586cda7c1de76a4
+      size: 4262
+    outs:
+    - path: artifacts\best_threshold_xgb.json
+      hash: md5
+      md5: ca765217a488351d33127da20c96ab3c
+      size: 44
+    - path: metrics_threshold_xgb.json
+      hash: md5
+      md5: c443f1ecf13f2484c235c041fe9b5426
+      size: 221
+    - path: reports\pr_curve_xgb.png
+      hash: md5
+      md5: 53f4c502b59eb81d3c195152a0981860
+      size: 21552
+    - path: reports\roc_curve_xgb.png
+      hash: md5
+      md5: dabc3466c0491b079be2b0c908ba89ee
+      size: 21135
+  evaluate_test_xgb:
+    cmd: python src\evaluate.py --test data\processed\test.csv --model 
+      models\model_xgb.joblib --threshold-file artifacts\best_threshold_xgb.json
+      --metrics-out metrics_test_xgb.json
+    deps:
+    - path: artifacts\best_threshold_xgb.json
+      hash: md5
+      md5: ca765217a488351d33127da20c96ab3c
+      size: 44
+    - path: data\processed\test.csv
+      hash: md5
+      md5: 504c23a16229ee2680239bd7f5206d4c
+      size: 204688
+    - path: models\model_xgb.joblib
+      hash: md5
+      md5: d35a1a2e10a839c822d69cefde571a6a
+      size: 353662
+    - path: src\evaluate.py
+      hash: md5
+      md5: 682ce56ccf5862239c62c6ebc55c9dd9
+      size: 2503
+    outs:
+    - path: metrics_test_xgb.json
+      hash: md5
+      md5: 6904d8a683a5ab08d1d891faedaac804
+      size: 259
