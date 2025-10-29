@@ -208,3 +208,17 @@ stages:
     outs:
     - reports\benchmark.md
     - reports\f1_bench.png
+  feature_eng:
+    cmd: python src\feature_eng.py --train-in data\processed\train.csv 
+      --valid-in data\processed\valid.csv --test-in data\processed\test.csv 
+      --train-out data\features\train_fe.csv --valid-out 
+      data\features\valid_fe.csv --test-out data\features\test_fe.csv
+    deps:
+    - data\processed\test.csv
+    - data\processed\train.csv
+    - data\processed\valid.csv
+    - src\feature_eng.py
+    outs:
+    - data\features\test_fe.csv
+    - data\features\train_fe.csv
+    - data\features\valid_fe.csv
