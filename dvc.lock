@@ -25,8 +25,8 @@ stages:
     deps:
     - path: artifacts\best_params.json
       hash: md5
-      md5: 35999a62ede63cb3e458d4c11a6101af
-      size: 38
+      md5: d20390841c946883c84aef457b51248d
+      size: 37
     - path: data\processed\train.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
@@ -47,19 +47,19 @@ stages:
     outs:
     - path: metrics.json
       hash: md5
-      md5: 440a0c42ab8a2dcac8fd289c5be9313a
-      size: 224
+      md5: e304825870467993bc163fdd4a5a4c2b
+      size: 223
     - path: models\model.joblib
       hash: md5
-      md5: 95745aa7ecee96a9eb9ce8bcea139ca7
-      size: 1921
+      md5: a7840a2b37e912b68871565b41bf4cf4
+      size: 1886
   evaluate_test:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
       models\model.joblib --metrics-out metrics_test.json
     deps:
     - path: artifacts\best_threshold.json
       hash: md5
-      md5: 11edafd393b622bd4d7085d16a8c9ded
+      md5: 6e4d6bc56e8088e8163e7e8523ac780f
       size: 44
     - path: data\processed\test.csv
       hash: md5
@@ -67,17 +67,17 @@ stages:
       size: 204688
     - path: models\model.joblib
       hash: md5
-      md5: 636a0e94896d6158a2231dc1243060aa
-      size: 1973
+      md5: a7840a2b37e912b68871565b41bf4cf4
+      size: 1886
     - path: src\evaluate.py
       hash: md5
-      md5: fdda023f595d55dae270d990e5445037
-      size: 2973
+      md5: 682ce56ccf5862239c62c6ebc55c9dd9
+      size: 2503
     outs:
     - path: metrics_test.json
       hash: md5
-      md5: c74c9b2a9adcaf60f08cd6b9871ee0f4
-      size: 256
+      md5: 071df9b5991e98dc27b376ca493d7ffd
+      size: 243
   tune:
     cmd: python src\tune.py --train data\processed\train.csv --valid 
       data\processed\valid.csv --params params.yaml --best-out 
@@ -93,28 +93,28 @@ stages:
       size: 102550
     - path: params.yaml
       hash: md5
-      md5: be9cb0dcac06a29cf06fca39e4b1fd41
-      size: 392
+      md5: 95eb94c4986788e34575257a4a2ade9e
+      size: 733
     - path: src\tune.py
       hash: md5
-      md5: 6069d1e128d49a26f0d42bcb56533ac3
-      size: 3442
+      md5: 65bd773ec9bcf221a1d45e1f85c20601
+      size: 3993
     outs:
     - path: artifacts\best_params.json
       hash: md5
-      md5: 35999a62ede63cb3e458d4c11a6101af
-      size: 38
+      md5: d20390841c946883c84aef457b51248d
+      size: 37
     - path: metrics_tune.json
       hash: md5
-      md5: 37cb809e039c09bc348f9e3301e59cff
-      size: 283
+      md5: 357020b4a9640396c0e76e05838ed144
+      size: 118
   predict_test:
     cmd: python src\predict.py --input data\processed\test.csv --model 
       models\model.joblib --output predictions\preds_test.csv
     deps:
     - path: artifacts\best_threshold.json
       hash: md5
-      md5: 11edafd393b622bd4d7085d16a8c9ded
+      md5: 6e4d6bc56e8088e8163e7e8523ac780f
       size: 44
     - path: data\processed\test.csv
       hash: md5
@@ -122,8 +122,8 @@ stages:
       size: 204688
     - path: models\model.joblib
       hash: md5
-      md5: ed3a6a07bcf55464804970d8e94a66c4
-      size: 1973
+      md5: a7840a2b37e912b68871565b41bf4cf4
+      size: 1886
     - path: src\predict.py
       hash: md5
       md5: d062f3ec68a89efa2b321776425beb88
@@ -131,8 +131,8 @@ stages:
     outs:
     - path: predictions\preds_test.csv
       hash: md5
-      md5: 6106bac0055fff4091743986526e47fe
-      size: 243063
+      md5: e2880f86bfcdc358f7d0b2622e4bd933
+      size: 243100
   threshold:
     cmd: python src\threshold.py --valid data\processed\valid.csv --model 
       models\model.joblib --out-json artifacts\best_threshold.json --metrics-out
@@ -145,8 +145,8 @@ stages:
       size: 102550
     - path: models\model.joblib
       hash: md5
-      md5: 39f0d75a7b356fcfb17a1bbf9d2beeec
-      size: 1973
+      md5: a7840a2b37e912b68871565b41bf4cf4
+      size: 1886
     - path: src\threshold.py
       hash: md5
       md5: 71e2e6bb6a7306312586cda7c1de76a4
@@ -154,20 +154,20 @@ stages:
     outs:
     - path: artifacts\best_threshold.json
       hash: md5
-      md5: 11edafd393b622bd4d7085d16a8c9ded
+      md5: 6e4d6bc56e8088e8163e7e8523ac780f
       size: 44
     - path: metrics_threshold.json
       hash: md5
-      md5: 12944f9e35b28d325d3acdae8c9500e8
-      size: 230
+      md5: 30a56a4e82f029f92d6f6e34bac7d66e
+      size: 226
     - path: reports\pr_curve.png
       hash: md5
-      md5: f0d17ca82200ce04bf87d4c1ee169af4
-      size: 20959
+      md5: b1a9802df3b5c7c1cc2dcbe6794c4cf3
+      size: 21428
     - path: reports\roc_curve.png
       hash: md5
-      md5: 387ba5a3156416cf4ba3e491c9390a3f
-      size: 21061
+      md5: 335da4793b09a75a4ede833f9cf2ec6a
+      size: 21047
   tune_rf:
     cmd: python src\tune_rf.py --train data\processed\train.csv --valid 
       data\processed\valid.csv --params params.yaml --best-out 
@@ -273,8 +273,8 @@ stages:
       size: 102550
     - path: params.yaml
       hash: md5
-      md5: 55cecc886671194e85d111e14bb00daf
-      size: 665
+      md5: 95eb94c4986788e34575257a4a2ade9e
+      size: 733
     - path: src\tune_xgb.py
       hash: md5
       md5: 044e2f84f0326eb3c126937252450ef1
@@ -308,8 +308,8 @@ stages:
       size: 102550
     - path: params.yaml
       hash: md5
-      md5: 55cecc886671194e85d111e14bb00daf
-      size: 665
+      md5: 95eb94c4986788e34575257a4a2ade9e
+      size: 733
     - path: src\train_xgb.py
       hash: md5
       md5: adbd9987afbb3c968b531900dbefb147
@@ -384,3 +384,29 @@ stages:
       hash: md5
       md5: 6904d8a683a5ab08d1d891faedaac804
       size: 259
+  predict_test_xgb:
+    cmd: python src\predict.py --input data\processed\test.csv --model 
+      models\model_xgb.joblib --threshold-file artifacts\best_threshold_xgb.json
+      --output predictions\preds_test_xgb.csv
+    deps:
+    - path: artifacts\best_threshold_xgb.json
+      hash: md5
+      md5: ca765217a488351d33127da20c96ab3c
+      size: 44
+    - path: data\processed\test.csv
+      hash: md5
+      md5: 504c23a16229ee2680239bd7f5206d4c
+      size: 204688
+    - path: models\model_xgb.joblib
+      hash: md5
+      md5: d35a1a2e10a839c822d69cefde571a6a
+      size: 353662
+    - path: src\predict.py
+      hash: md5
+      md5: bf82fc6f588df3798a3a63cb22be0654
+      size: 2254
+    outs:
+    - path: predictions\preds_test_xgb.csv
+      hash: md5
+      md5: 98245684b984935685ed89a3c55d0036
+      size: 27413

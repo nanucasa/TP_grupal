@@ -1,1 +1,3 @@
 /model.joblib
+/model_rf.joblib
+/model_xgb.joblib

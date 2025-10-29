@@ -1,50 +1,62 @@
-# src/predict.py
-# Inferencia por lotes: recibe CSV (con o sin 'churn') y genera proba/pred.
-import argparse, os, json
-import pandas as pd, numpy as np, joblib
+
+# Genera predicciones a partir de un CSV de features (puede incluir 'churn').
+# Soporta umbral por valor directo (--threshold) o por archivo JSON (--threshold-file).
+
+import argparse, json, os
+import numpy as np, pandas as pd, joblib
+
+def load_threshold(path, default=0.5):
+    t = default
+    if path and os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                J = json.load(f)
+            for k in ("best_threshold", "threshold", "best", "value"):
+                if k in J:
+                    t = float(J[k])
+                    break
+        except Exception:
+            pass
+    return float(t)
+
+def proba_from_model(model, X):
+    if hasattr(model, "predict_proba"):
+        return model.predict_proba(X)[:, 1]
+    elif hasattr(model, "decision_function"):
+        s = np.asarray(model.decision_function(X), dtype=float)
+        # Normaliza a [0,1] para poder umbralizar
+        s = (s - s.min()) / (s.max() - s.min() + 1e-12)
+        return s
+    else:
+        # Fallback: usa la predicción directa como 0/1 y la castea a float
+        return model.predict(X).astype(float)
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input", required=True, help="CSV de entrada; si existe 'churn', se descarta")
-    ap.add_argument("--model", required=True, help="Ruta al modelo .joblib")
-    ap.add_argument("--output", required=True, help="CSV de salida con proba y pred")
-    ap.add_argument("--threshold", type=float, default=None, help="Umbral; si no se pasa, usa artifacts/best_threshold.json o 0.5")
+    ap.add_argument("--input", required=True)
+    ap.add_argument("--model", required=True)
+    ap.add_argument("--output", required=True)
+    ap.add_argument("--threshold", type=float, default=None)
+    ap.add_argument("--threshold-file", default=None)
+    ap.add_argument("--target", default="churn")
     args = ap.parse_args()
 
     df = pd.read_csv(args.input)
-    if "churn" in df.columns:
-        df = df.drop(columns=["churn"])
 
-    X = df.to_numpy(dtype=float)
+    # Si viene la columna target en el CSV, la removemos para predecir
+    X = df.drop(columns=[args.target]) if args.target in df.columns else df.copy()
+
     model = joblib.load(args.model)
+    prob = proba_from_model(model, X)
 
-    # Umbral
-    thr = args.threshold
-    if thr is None:
-        th_path = os.path.join("artifacts", "best_threshold.json")
-        if os.path.exists(th_path):
-            try:
-                thr = float(json.load(open(th_path, "r", encoding="utf-8"))["best_threshold"])
-            except Exception:
-                thr = 0.5
-        else:
-            thr = 0.5
-
-    if hasattr(model, "predict_proba"):
-        prob = model.predict_proba(X)[:, 1]
-        pred = (prob >= thr).astype(int)
-    else:
-        prob = None
-        pred = model.predict(X)
-
-    out = df.copy()
-    if prob is not None:
-        out["proba_churn"] = prob
-    out["pred_churn"] = pred
+    thr = args.threshold if args.threshold is not None else load_threshold(args.threshold_file, 0.5)
+    pred = (prob >= float(thr)).astype(int)
 
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
-    out.to_csv(args.output, index=False)
-    print(f"[OK] guardado: {args.output} ({len(out)} filas) | threshold={thr}")
+    out_df = pd.DataFrame({"proba": prob, "pred": pred})
+    out_df.to_csv(args.output, index=False)
+
+    print(f"[OK] preds -> {args.output} | threshold={thr:.4f}")
 
 if __name__ == "__main__":
     main()

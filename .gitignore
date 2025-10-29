@@ -1,2 +1,5 @@
 mlruns/
-mlflow.db
+mlflow.dbmlruns/
+mlflow*.db
+__pycache__/
+*.pyc
