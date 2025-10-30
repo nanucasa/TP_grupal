@@ -57,10 +57,6 @@ stages:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
       models\model.joblib --metrics-out metrics_test.json
     deps:
-    - path: artifacts\best_threshold.json
-      hash: md5
-      md5: 6e4d6bc56e8088e8163e7e8523ac780f
-      size: 44
     - path: data\processed\test.csv
       hash: md5
       md5: 504c23a16229ee2680239bd7f5206d4c
@@ -216,10 +212,6 @@ stages:
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
-    - path: params.yaml
-      hash: md5
-      md5: 95eb94c4986788e34575257a4a2ade9e
-      size: 733
     - path: src\train_rf.py
       hash: md5
       md5: 5b33c7e164067f89cc28bb8f82bdeb76
@@ -237,10 +229,6 @@ stages:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
       models\model_rf.joblib --metrics-out metrics_test_rf.json
     deps:
-    - path: artifacts\best_threshold.json
-      hash: md5
-      md5: 6e4d6bc56e8088e8163e7e8523ac780f
-      size: 44
     - path: data\processed\test.csv
       hash: md5
       md5: 504c23a16229ee2680239bd7f5206d4c
@@ -306,10 +294,6 @@ stages:
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
-    - path: params.yaml
-      hash: md5
-      md5: 95eb94c4986788e34575257a4a2ade9e
-      size: 733
     - path: src\train_xgb.py
       hash: md5
       md5: adbd9987afbb3c968b531900dbefb147
@@ -360,13 +344,8 @@ stages:
       size: 21135
   evaluate_test_xgb:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
-      models\model_xgb.joblib --threshold-file artifacts\best_threshold_xgb.json
-      --metrics-out metrics_test_xgb.json
+      models\model_xgb.joblib --metrics-out metrics_test_xgb.json
     deps:
-    - path: artifacts\best_threshold_xgb.json
-      hash: md5
-      md5: ca765217a488351d33127da20c96ab3c
-      size: 44
     - path: data\processed\test.csv
       hash: md5
       md5: 504c23a16229ee2680239bd7f5206d4c
@@ -382,8 +361,8 @@ stages:
     outs:
     - path: metrics_test_xgb.json
       hash: md5
-      md5: 6904d8a683a5ab08d1d891faedaac804
-      size: 259
+      md5: cb8cfdbed298afc31f5fe8a7f63596f0
+      size: 243
   predict_test_xgb:
     cmd: python src\predict.py --input data\processed\test.csv --model 
       models\model_xgb.joblib --threshold-file artifacts\best_threshold_xgb.json
