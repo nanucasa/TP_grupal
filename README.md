@@ -1,120 +1,171 @@
-# Proyecto: Telco Churn – Pipeline reproducible (DVC + MLflow)
+Proyecto: Telco Churn — Pipeline reproducible (DVC + MLflow)
 
-Pipeline de Minería de Datos con **DVC** (datos/artefactos), **MLflow** (experimentos y registro de modelos), y control de versiones en **Git** (GitHub + DagsHub).
+Pipeline de Minería de Datos con DVC (datos/artefactos), MLflow (experimentos y registro de modelos) y control de versiones en Git (GitHub + DagsHub). Entorno de trabajo: Windows, conda env tp_grupal, raíz del repo: C:\dvc_prueba.
 
----
+REQUISITOS
 
-## Requisitos
-- Python/Conda (entorno: `tp_grupal`)
-- Instalar dependencias del repo:
-  ```bash
-  pip install -r requirements.txt
+Python/Conda (entorno: tp_grupal)
 
+Instalar dependencias: pip install -r requirements.txt
 
-ESTRUCTURA DE NUESTRAS CARPETAS
+Directorio raíz de trabajo: C:\dvc_prueba
+
+ESTRUCTURA DE CARPETAS
 
 C:\dvc_prueba
 ├─ data
-│  ├─ raw\            # datos crudos (DVC)
-│  └─ processed\      # datos procesados (DVC)
-├─ models\            # modelos entrenados (.joblib, DVC)
-├─ artifacts\         # parámetros/umbrales (JSON, Git)
-├─ predictions\       # inferencias (CSV, DVC)
-├─ reports\           # gráficos (PNG, DVC)
-├─ src\               # código (Python, Git)
-├─ scripts\           # utilidades (Git)
-├─ dvc.yaml / dvc.lock
-├─ params.yaml
-└─ README.md
+│ ├─ raw\ (DVC)
+│ ├─ processed\ (DVC)
+│ └─ features\ (DVC)
+├─ models\ (DVC)
+├─ artifacts\ (Git; JSON chicos p/decisiones y selección)
+├─ predictions\ (DVC)
+├─ reports\ (DVC)
+├─ src\ (Git; código)
+├─ scripts\ (Git; utilidades)
+├─ dvc.yaml / dvc.lock (Git)
+├─ params.yaml (Git)
+└─ README.md (Git)
 
+Nota DVC vs Git:
 
-STAGES DEL PIPELINE DVC
+DVC (no Git): data/, models/, predictions/, reports/.
+
+Git: src/, scripts/, dvc.yaml, dvc.lock, params.yaml, métricas *.json, artifacts/selection.json.
+
+STAGES DEL PIPELINE (DVC)
 
 data_prep
-  ├─ tune ──► train ──► threshold ──► predict_test ──► evaluate_test
-  └─ tune_rf ──► train_rf ──► predict_test_rf ──► evaluate_test_rf
+├─ tune ──► train ──► threshold ──► predict_test ──► evaluate_test
+├─ tune_rf ──► train_rf ──► evaluate_test_rf (y opcional predict_test_rf)
+└─ feature_eng ──► train_fe ──► threshold_fe ──► predict_test_fe ──► evaluate_test_fe
 
+Selección y Registro:
+select_register (elige campeón por métrica de test y crea/actualiza aliases en MLflow Model Registry; genera artifacts/selection.json)
 
 CÓMO REPRODUCIR EL PIPELINE
 
+Ejecutar todo el pipeline:
 dvc repro
+
+Ver métricas agregadas:
 dvc metrics show
 
-COMO EJECUTAR ETAPAS PUNTUALES
-
+Ejecutar etapas puntuales (ejemplos):
+dvc repro -f data_prep
 dvc repro -f tune
 dvc repro -f train
 dvc repro -f threshold
+dvc repro -f predict_test
 dvc repro -f evaluate_test
 dvc repro -f tune_rf
 dvc repro -f train_rf
 dvc repro -f evaluate_test_rf
-dvc repro -f predict_test
-dvc repro -f predict_test_rf
+dvc repro -f feature_eng
+dvc repro -f train_fe
+dvc repro -f threshold_fe
+dvc repro -f predict_test_fe
+dvc repro -f evaluate_test_fe
+dvc repro -f select_register
 
-
-MLflow (tracking local)
-CÓMO INICIAR UI LOCAL: 
-
-mlflow ui --backend-store-uri sqlite:///C:/dvc_prueba/mlflow.db --default-artifact-root file:///C:/dvc_prueba/mlruns --host 127.0.0.1 --port 5001
-
-UI: http://127.0.0.1:5001
-
-Experimentos: telco_churn_tune, telco_churn_baseline, telco_churn_threshold, telco_churn_eval, telco_churn_tune_rf, telco_churn_baseline_rf
-
-Model Registry: TelcoChurn_LogReg, TelcoChurn_RF (Staging)
-
-DATOS Y ARTEFACTOS:
-
-DVC: datasets procesados, modelos (models/*.joblib), predicciones (predictions/*.csv), y gráficos (reports/*.png).
-
-Git: código (src/, scripts/), configuración (params.yaml), métricas (metrics_*.json) y JSONs chicos en artifacts/.
+Después de cada corrida relevante:
 dvc push
 
-RESULTADOS (Benchmark)
+MLFLOW (TRACKING LOCAL + REGISTRY)
 
-Esta tabla se actualiza automáticamente con python scripts/update_readme_metrics.py.
+Iniciar servidor MLflow (2.22.2) en local:
+mlflow server --backend-store-uri sqlite:///C:/dvc_prueba/mlflow_222.db --default-artifact-root file:///C:/dvc_prueba/mlruns --host 127.0.0.1 --port 5001
 
-<!-- METRICS_START -->
+UI local:
+http://127.0.0.1:5001
 
-## Resultados (Benchmark)
+Variable de entorno para scripts:
+Windows (cmd): set MLFLOW_TRACKING_URI=http://127.0.0.1:5001
 
-_Las métricas provienen de los JSON versionados por DVC (valid/test)._
+Experimentos usados:
+telco_churn_tune, telco_churn_baseline, telco_churn_threshold, telco_churn_eval
+telco_churn_tune_rf, telco_churn_baseline_rf
+telco_churn_tune_xgb (y análogos si aplica FE: *_fe)
 
-| Model | Split | Threshold | Accuracy | Precision | Recall | F1 | ROC_AUC | PR_AP |
-|---|---|---|---|---|---|---|---|---|
-| LogReg | valid | 0.4542 | 0.6520 | 0.5134 | 0.7934 | 0.6234 | 0.2582 | 0.6001 |
-| LogReg | test | 0.4542 | 0.6330 | 0.4969 | 0.7772 | 0.6062 | 0.7362 | 0.5989 |
-| RF | valid |  | 0.6650 | 0.5277 | 0.7355 | 0.6145 |  |  |
-| RF | test | 0.4542 | 0.5965 | 0.4691 | 0.8363 | 0.6011 | 0.7316 | 0.6071 |
-<!-- METRICS_END -->
+Model Registry:
+TelcoChurn_LogReg, TelcoChurn_RF, TelcoChurn_XGB
+Aliases: “champion” (mejor en test), “challenger” (segundo)
 
-FLUJO DE LOS COMMIT Y EL PUSH 
+RESULTADOS (BENCHMARK)
 
-Versionar cambios en Git:
+La tabla siguiente se actualiza automáticamente con scripts/update_readme_metrics.py, leyendo metrics*.json y artifacts/best_threshold*.json.
+
+<!-- METRICS_START --> <!-- La tabla se inserta aquí por scripts/update_readme_metrics.py --> <!-- METRICS_END -->
+
+FLUJO DE VERSIONADO (GIT + DAGSHUB + DVC)
+
+Versionar cambios en Git (código, dvc.yaml/lock, métricas y artifacts/selection.json):
 git add .
-git commit -m "feat/fix: descripción corta del cambio"
+git commit -m "feat: descripción breve del cambio"
 
 Push a DagsHub (primero):
 git push -u dagshub main
 
 Push a GitHub (Credential Manager):
 git remote set-url origin https://github.com/nanucasa/TP_grupal.git
+
 git config --global credential.helper manager
 git push -u origin main --verbose
 
-Subir artefactos DVC:
+Subir artefactos DVC (datasets procesados, modelos, predicciones, gráficos):
 dvc push
 
-Scripts auxiliares:
-scripts/update_readme_metrics.py: actualiza la sección de métricas del README leyendo metrics_*.json y artifacts/best_threshold.json.
+Comentario de commit sugerido (breve y claro):
+feat: agrega nueva stage / fix: corrige bug / docs: actualiza README / chore: mantenimiento
 
-Reproducibilidad rápida
-# Procesar datos, entrenar, sintonizar, umbral, evaluar, predecir
+EJECUCIONES TÍPICAS
+
+Entrenamiento base + evaluación:
 dvc repro
 
-# Actualizar tabla de métricas en README
-python scripts/update_readme_metrics.py
+Rama RF:
+dvc repro -f tune_rf
+dvc repro -f train_rf
+dvc repro -f evaluate_test_rf
 
-# Ver métricas
-dvc metrics show
+Rama FE:
+dvc repro -f feature_eng
+dvc repro -f train_fe
+dvc repro -f threshold_fe
+dvc repro -f evaluate_test_fe
+
+Selección y registro del mejor modelo (actualiza aliases en Registry y artifacts/selection.json):
+dvc repro -f select_register
+
+Predicciones por lote (según rama/modelo):
+dvc repro -f predict_test
+dvc repro -f predict_test_fe
+(dvc generará predictions/*.csv; subir luego con dvc push)
+
+PARÁMETROS Y MÉTRICAS
+
+Parámetros (params.yaml):
+
+train.C, train.max_iter, train.seed
+
+Grillas de tuneo por modelo (p. ej. tune.C_grid, tune_rf., tune_xgb.) si aplica
+
+Métricas (Git):
+
+metrics.json, metrics_test.json, metrics_threshold.json, metrics_tune*.json
+
+variantes RF/FE/XGB análogas (metrics_rf.json, metrics_test_rf.json, metrics_fe.json, metrics_test_fe.json, etc.)
+
+artifacts/selection.json (resumen del campeón/challenger)
+
+NOTAS
+
+No agregar manualmente a Git salidas de DVC (data/, models/, predictions/, reports/). Usar siempre dvc push para publicarlas.
+
+Si alguna regla .gitignore impide versionar artifacts/selection.json, añadir excepción: !artifacts/selection.json
+
+MLflow local corre en 127.0.0.1:5001 usando C:/dvc_prueba/mlflow_222.db y C:/dvc_prueba/mlruns como raíz de artefactos.
+
+CRÉDITOS
+
+Materia: Laboratorio de Minería de Datos. Proyecto Telco Churn — pipeline reproducible con DVC + MLflow, tracking/registry local y sincronización a DagsHub y GitHub.
