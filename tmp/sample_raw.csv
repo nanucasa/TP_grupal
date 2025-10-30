@@ -1,0 +1,12 @@
+﻿age,tenure_months,monthly_charges,total_charges,gender_Male,region_North,region_South,region_West,contract_type_One year,contract_type_Two year,internet_service_Fiber optic,internet_service_No,phone_service_Yes,multiple_lines_No phone service,multiple_lines_Yes,payment_method_Credit card,payment_method_Electronic check,payment_method_Mailed check,churn
+53,69,50.55,3499.87,True,False,False,True,False,True,True,False,False,True,False,False,True,False,1
+63,26,77.12,2011.28,True,False,True,False,False,True,True,False,True,False,False,False,True,False,0
+55,22,89.38,1989.83,False,False,False,False,False,False,False,False,True,False,True,True,False,False,1
+53,30,35.07,1059.26,False,False,False,True,False,True,False,True,False,True,False,False,False,False,0
+43,46,28.18,1312.03,False,False,True,False,False,False,False,True,True,False,False,False,True,False,1
+age,tenure_months,monthly_charges,total_charges,gender_Male,region_North,region_South,region_West,contract_type_One year,contract_type_Two year,internet_service_Fiber optic,internet_service_No,phone_service_Yes,multiple_lines_No phone service,multiple_lines_Yes,payment_method_Credit card,payment_method_Electronic check,payment_method_Mailed check,churn
+53,69,50.55,3499.87,True,False,False,True,False,True,True,False,False,True,False,False,True,False,1
+63,26,77.12,2011.28,True,False,True,False,False,True,True,False,True,False,False,False,True,False,0
+55,22,89.38,1989.83,False,False,False,False,False,False,False,False,True,False,True,True,False,False,1
+53,30,35.07,1059.26,False,False,False,True,False,True,False,True,False,True,False,False,False,False,0
+43,46,28.18,1312.03,False,False,True,False,False,False,False,True,True,False,False,False,True,False,1
