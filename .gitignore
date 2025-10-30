@@ -8,3 +8,14 @@ mlflow*.db
 __pycache__/
 *.pyc
 predictions/preds_sample_serving.json
+
+ECHO est  activado.
+reports/*
+!reports/
+!reports/benchmark.md
+!reports/f1_bench.png
+
+ECHO est  activado.
+!reports/
+!reports/benchmark.md
+!reports/f1_bench.png
