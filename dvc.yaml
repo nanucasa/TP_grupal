@@ -286,3 +286,13 @@ stages:
     - src\predict.py
     outs:
     - predictions\preds_test_fe.csv
+  predict_champion:
+    cmd: python scripts\predict_champion.py --test data\processed\test.csv 
+      --out predictions\preds_test_champion.csv --mlflow-uri 
+      http://127.0.0.1:5001
+    deps:
+    - artifacts\selection.json
+    - data\processed\test.csv
+    - scripts\predict_champion.py
+    outs:
+    - predictions\preds_test_champion.csv
