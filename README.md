@@ -95,7 +95,19 @@ RESULTADOS (BENCHMARK)
 
 La tabla siguiente se actualiza automáticamente con scripts/update_readme_metrics.py, leyendo metrics*.json y artifacts/best_threshold*.json.
 
-<!-- METRICS_START --> <!-- La tabla se inserta aquí por scripts/update_readme_metrics.py --> <!-- METRICS_END -->
+<!-- METRICS_START -->
+
+## Resultados (Benchmark)
+
+_Las métricas provienen de los JSON versionados por DVC (valid/test)._
+
+| Model | Split | Threshold | Accuracy | Precision | Recall | F1 | ROC_AUC | PR_AP |
+|---|---|---|---|---|---|---|---|---|
+| LogReg | valid | 0.4525 | 0.6470 | 0.5089 | 0.7879 | 0.6184 | 0.2577 | 0.5983 |
+| LogReg | test | 0.5000 | 0.6585 | 0.5222 | 0.7125 | 0.6027 | 0.7367 | 0.5976 |
+| RF | valid |  | 0.6650 | 0.5277 | 0.7355 | 0.6145 |  |  |
+| RF | test | 0.5000 | 0.6470 | 0.5102 | 0.7249 | 0.5989 | 0.7316 | 0.6071 |
+<!-- METRICS_END -->
 
 FLUJO DE VERSIONADO (GIT + DAGSHUB + DVC)
 
