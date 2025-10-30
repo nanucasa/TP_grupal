@@ -126,13 +126,13 @@ stages:
       size: 1886
     - path: src\predict.py
       hash: md5
-      md5: d062f3ec68a89efa2b321776425beb88
-      size: 1740
+      md5: bf82fc6f588df3798a3a63cb22be0654
+      size: 2254
     outs:
     - path: predictions\preds_test.csv
       hash: md5
-      md5: e2880f86bfcdc358f7d0b2622e4bd933
-      size: 243100
+      md5: 8809bd86ed8ce665df2a57f8999a22bf
+      size: 44407
   threshold:
     cmd: python src\threshold.py --valid data\processed\valid.csv --model 
       models\model.joblib --out-json artifacts\best_threshold.json --metrics-out
@@ -578,3 +578,78 @@ stages:
       hash: md5
       md5: a1047be0555c69a6956552b83419609e
       size: 27413
+  predict_test_rf:
+    cmd: python src\predict.py --input data\processed\test.csv --model 
+      models\model_rf.joblib --output predictions\preds_test_rf.csv
+    deps:
+    - path: artifacts\best_threshold.json
+      hash: md5
+      md5: 6e4d6bc56e8088e8163e7e8523ac780f
+      size: 44
+    - path: data\processed\test.csv
+      hash: md5
+      md5: 504c23a16229ee2680239bd7f5206d4c
+      size: 204688
+    - path: models\model_rf.joblib
+      hash: md5
+      md5: d9e1861e80bee5fe892daf8cb4d1ee4d
+      size: 1576329
+    - path: src\predict.py
+      hash: md5
+      md5: bf82fc6f588df3798a3a63cb22be0654
+      size: 2254
+    outs:
+    - path: predictions\preds_test_rf.csv
+      hash: md5
+      md5: c68fb03c2a6d4de354a6f6dcddc5fac6
+      size: 44273
+  predict_test_fe:
+    cmd: python src\predict.py --input data\features\test_fe.csv --model 
+      models\model_fe.joblib --output predictions\preds_test_fe.csv 
+      --threshold-file artifacts\best_threshold_fe.json
+    deps:
+    - path: data\features\test_fe.csv
+      hash: md5
+      md5: 504c23a16229ee2680239bd7f5206d4c
+      size: 204688
+    - path: models\model_fe.joblib
+      hash: md5
+      md5: a7840a2b37e912b68871565b41bf4cf4
+      size: 1886
+    - path: src\predict.py
+      hash: md5
+      md5: bf82fc6f588df3798a3a63cb22be0654
+      size: 2254
+    outs:
+    - path: predictions\preds_test_fe.csv
+      hash: md5
+      md5: 2885377864edc5d23ab4dcba86a49484
+      size: 44407
+  report_benchmark:
+    cmd: python src\report_benchmark.py
+    deps:
+    - path: metrics_test.json
+      hash: md5
+      md5: 071df9b5991e98dc27b376ca493d7ffd
+      size: 243
+    - path: metrics_test_rf.json
+      hash: md5
+      md5: 21b46a95c92c615f2e997a5e3a1ec6c3
+      size: 241
+    - path: metrics_test_xgb.json
+      hash: md5
+      md5: 6904d8a683a5ab08d1d891faedaac804
+      size: 259
+    - path: src\report_benchmark.py
+      hash: md5
+      md5: c03f1138751a5f633f1560085bc945ca
+      size: 1846
+    outs:
+    - path: reports\benchmark.md
+      hash: md5
+      md5: fafcad64fadd3ef67d2281b20719390f
+      size: 516
+    - path: reports\f1_bench.png
+      hash: md5
+      md5: 48d8ba4502cccccf73317c694a414b5c
+      size: 16506
