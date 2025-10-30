@@ -106,7 +106,8 @@ stages:
       size: 118
   predict_test:
     cmd: python src\predict.py --input data\processed\test.csv --model 
-      models\model.joblib --output predictions\preds_test.csv
+      models\model.joblib --output predictions\preds_test.csv --threshold-file 
+      artifacts\best_threshold.json
     deps:
     - path: artifacts\best_threshold.json
       hash: md5
@@ -127,7 +128,7 @@ stages:
     outs:
     - path: predictions\preds_test.csv
       hash: md5
-      md5: 8809bd86ed8ce665df2a57f8999a22bf
+      md5: 2885377864edc5d23ab4dcba86a49484
       size: 44407
   threshold:
     cmd: python src\threshold.py --valid data\processed\valid.csv --model 
@@ -543,7 +544,7 @@ stages:
     outs:
     - path: artifacts\selection.json
       hash: md5
-      md5: 82f7a76fe23966db6ec189fd945616a9
+      md5: e0069c673d22a39ae8f7645d30891b53
       size: 1576
   predict_champion:
     cmd: python scripts\predict_champion.py --test data\processed\test.csv --out
@@ -568,7 +569,8 @@ stages:
       size: 6006
   predict_test_rf:
     cmd: python src\predict.py --input data\processed\test.csv --model 
-      models\model_rf.joblib --output predictions\preds_test_rf.csv
+      models\model_rf.joblib --output predictions\preds_test_rf.csv 
+      --threshold-file artifacts\best_threshold.json
     deps:
     - path: artifacts\best_threshold.json
       hash: md5
@@ -589,13 +591,17 @@ stages:
     outs:
     - path: predictions\preds_test_rf.csv
       hash: md5
-      md5: c68fb03c2a6d4de354a6f6dcddc5fac6
-      size: 44273
+      md5: 65d86085d28ce9de49b2c20acca9cf92
+      size: 44277
   predict_test_fe:
     cmd: python src\predict.py --input data\features\test_fe.csv --model 
       models\model_fe.joblib --output predictions\preds_test_fe.csv 
       --threshold-file artifacts\best_threshold_fe.json
     deps:
+    - path: artifacts\best_threshold_fe.json
+      hash: md5
+      md5: 6e4d6bc56e8088e8163e7e8523ac780f
+      size: 44
     - path: data\features\test_fe.csv
       hash: md5
       md5: 504c23a16229ee2680239bd7f5206d4c
@@ -614,9 +620,15 @@ stages:
       md5: 2885377864edc5d23ab4dcba86a49484
       size: 44407
   report_benchmark:
-    cmd: python src\report_benchmark.py
+    cmd: python src\report_benchmark.py --sources metrics_test.json 
+      metrics_test_rf.json metrics_test_xgb.json metrics_test_fe.json --out-md 
+      reports/benchmark.md --out-fig reports/f1_bench.png
     deps:
     - path: metrics_test.json
+      hash: md5
+      md5: 071df9b5991e98dc27b376ca493d7ffd
+      size: 243
+    - path: metrics_test_fe.json
       hash: md5
       md5: 071df9b5991e98dc27b376ca493d7ffd
       size: 243
@@ -626,8 +638,8 @@ stages:
       size: 241
     - path: metrics_test_xgb.json
       hash: md5
-      md5: 6904d8a683a5ab08d1d891faedaac804
-      size: 259
+      md5: cb8cfdbed298afc31f5fe8a7f63596f0
+      size: 243
     - path: src\report_benchmark.py
       hash: md5
       md5: c03f1138751a5f633f1560085bc945ca
@@ -635,9 +647,27 @@ stages:
     outs:
     - path: reports\benchmark.md
       hash: md5
-      md5: fafcad64fadd3ef67d2281b20719390f
-      size: 516
+      md5: 46038ebdb12ee3fcf5ce73feb2ad75ad
+      size: 500
     - path: reports\f1_bench.png
       hash: md5
-      md5: 48d8ba4502cccccf73317c694a414b5c
-      size: 16506
+      md5: 8edf7f346395ff2d8239a3b6c3e1ca95
+      size: 16515
+  alias_champion:
+    cmd: python scripts\alias_champion.py --mlflow-uri http://127.0.0.1:5001 
+      --selection artifacts\selection.json --alias champion --write-out 
+      artifacts\aliases_applied.json
+    deps:
+    - path: artifacts\selection.json
+      hash: md5
+      md5: e0069c673d22a39ae8f7645d30891b53
+      size: 1576
+    - path: scripts\alias_champion.py
+      hash: md5
+      md5: 1139ac0071063ba95c41bb82b3d7bbcf
+      size: 5444
+    outs:
+    - path: artifacts\aliases_applied.json
+      hash: md5
+      md5: ec8af130fc8db5f4dfeb87ca4bb94e57
+      size: 238
