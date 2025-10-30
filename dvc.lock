@@ -532,31 +532,40 @@ stages:
       hash: md5
       md5: 21b46a95c92c615f2e997a5e3a1ec6c3
       size: 241
+    - path: metrics_test_xgb.json
+      hash: md5
+      md5: cb8cfdbed298afc31f5fe8a7f63596f0
+      size: 243
     - path: scripts\select_and_register.py
       hash: md5
       md5: beb6dbf11532e0dfc862d7d8f75f6f23
       size: 4312
+    outs:
+    - path: artifacts\selection.json
+      hash: md5
+      md5: 35b9716c50362c56dda1661ad281fd41
+      size: 1576
   predict_champion:
     cmd: python scripts\predict_champion.py --test data\processed\test.csv --out
       predictions\preds_test_champion.csv --mlflow-uri http://127.0.0.1:5001
     deps:
     - path: artifacts\selection.json
       hash: md5
-      md5: a4778749a7afaada5ff03f9a93de2e66
-      size: 1606
+      md5: 35b9716c50362c56dda1661ad281fd41
+      size: 1576
     - path: data\processed\test.csv
       hash: md5
       md5: 504c23a16229ee2680239bd7f5206d4c
       size: 204688
     - path: scripts\predict_champion.py
       hash: md5
-      md5: 5e8f378fa70e3cf4e4075ae08bab73bb
-      size: 5641
+      md5: 834226dcf21b2b8d3e021eacc240bc24
+      size: 5643
     outs:
     - path: predictions\preds_test_champion.csv
       hash: md5
-      md5: a1047be0555c69a6956552b83419609e
-      size: 27413
+      md5: 1b485c15dae173038880c403b457f70b
+      size: 6006
   predict_test_rf:
     cmd: python src\predict.py --input data\processed\test.csv --model 
       models\model_rf.joblib --output predictions\preds_test_rf.csv
