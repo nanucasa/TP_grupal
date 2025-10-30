@@ -544,7 +544,7 @@ stages:
     outs:
     - path: artifacts\selection.json
       hash: md5
-      md5: e0069c673d22a39ae8f7645d30891b53
+      md5: d55c2b55dbc57324226bdeab06199d02
       size: 1576
   predict_champion:
     cmd: python scripts\predict_champion.py --test data\processed\test.csv --out
@@ -660,7 +660,7 @@ stages:
     deps:
     - path: artifacts\selection.json
       hash: md5
-      md5: e0069c673d22a39ae8f7645d30891b53
+      md5: d55c2b55dbc57324226bdeab06199d02
       size: 1576
     - path: scripts\alias_champion.py
       hash: md5
@@ -669,5 +669,5 @@ stages:
     outs:
     - path: artifacts\aliases_applied.json
       hash: md5
-      md5: ec8af130fc8db5f4dfeb87ca4bb94e57
+      md5: dc0c48da32fce9c9057c98eeabed3b63
       size: 238

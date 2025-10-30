@@ -2,8 +2,8 @@
   "applied": true,
   "alias": "champion",
   "name": "TelcoChurn_LogReg",
-  "version": 44,
+  "version": 46,
   "tracking_uri": "http://127.0.0.1:5001",
   "selection_file": "artifacts\\selection.json",
-  "timestamp": "2025-10-30T19:40:45.160544Z"
+  "timestamp": "2025-10-30T19:50:11.357414Z"
 }
