@@ -230,8 +230,6 @@ stages:
     - metrics_test_fe.json
     - metrics_test_rf.json
     - scripts\select_and_register.py
-    outs:
-    - artifacts\selection.json
   train_fe:
     cmd: python src\train.py --train data\features\train_fe.csv --valid 
       data\features\valid_fe.csv --out-model models\model_fe.joblib --metrics 

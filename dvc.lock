@@ -557,8 +557,3 @@ stages:
       hash: md5
       md5: beb6dbf11532e0dfc862d7d8f75f6f23
       size: 4312
-    outs:
-    - path: artifacts\selection.json
-      hash: md5
-      md5: b100fe93f7e963e22132384e690baf2b
-      size: 1606

@@ -1,5 +1,5 @@
 {
-  "ts": 1761783511,
+  "ts": 1761787684,
   "mlflow_uri": "http://127.0.0.1:5001",
   "champion": {
     "key": "XGB",
@@ -19,7 +19,7 @@
   "challenger": {
     "key": "LogReg",
     "model_name": "TelcoChurn_LogReg",
-    "version": 13,
+    "version": 20,
     "f1": 0.6026759744037231,
     "metrics": {
       "f1": 0.6026759744037231,
