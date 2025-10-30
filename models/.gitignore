@@ -1,3 +1,4 @@
 /model.joblib
 /model_rf.joblib
 /model_xgb.joblib
+/model_fe.joblib
