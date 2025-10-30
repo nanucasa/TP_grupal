@@ -1,47 +1,90 @@
-# scripts/predict_champion.py
-import argparse, json, os, sys
+
+import argparse, json, re, os
 import pandas as pd
-import numpy as np
-import joblib
+import mlflow
 
-try:
-    import mlflow
-    import mlflow.pyfunc
-except Exception:
-    mlflow = None  # toleramos ausencia si usamos modelo local
+def parse_selection(path):
+    with open(path, "r", encoding="utf-8") as f:
+        sel = json.load(f)
+    champ = sel.get("champion")
+    if champ is None:
+        raise ValueError("selection.json no contiene 'champion'.")
 
-def load_threshold(th_file: str | None) -> float:
-    if th_file and os.path.exists(th_file):
-        with open(th_file, "r", encoding="utf-8") as f:
-            J = json.load(f)
-        for k in ["best_threshold", "threshold", "best_thr", "thr"]:
-            if k in J:
-                return float(J[k])
-    return 0.5
+    # Caso string: "Name v34" o "Name@alias" o "Name"
+    if isinstance(champ, str):
+        s = champ.strip()
+        # models:/Name@alias o models:/Name/34
+        if s.lower().startswith("models:/"):
+            spec = s.split("models:/", 1)[1]
+            if "@" in spec:
+                name, alias = spec.split("@", 1)
+                return {"name": name.strip(), "version": None, "alias": alias.strip()}
+            if "/" in spec:
+                name, ver = spec.split("/", 1)
+                return {"name": name.strip(), "version": int(ver), "alias": None}
+            return {"name": spec.strip(), "version": None, "alias": None}
 
-def infer_uri_from_selection(sel: dict) -> tuple[str | None, str | None]:
-    """
-    Devuelve (tracking_uri, model_uri) si están en selection.json.
-    Acepta varias formas:
-      - {"mlflow_tracking_uri": "...", "mlflow_model_uri": "models:/Name/Version"}
-      - {"mlflow_uri": "...", "model_uri": "models:/Name/Version"}
-      - {"model_name": "TelcoChurn_XGB", "version": 9}
-    """
-    trk = sel.get("mlflow_tracking_uri") or sel.get("mlflow_uri")
-    muri = sel.get("mlflow_model_uri") or sel.get("model_uri")
+        # "Name@alias"
+        if "@" in s and " v" not in s.lower():
+            name, alias = s.split("@", 1)
+            return {"name": name.strip(), "version": None, "alias": alias.strip()}
 
-    if not muri and sel.get("model_name") and sel.get("version"):
-        muri = f"models:/{sel['model_name']}/{sel['version']}"
+        # "Name v34"
+        m = re.match(r"^(?P<name>.+?)\s+v(?P<ver>\d+)$", s, re.I)
+        if m:
+            return {"name": m.group("name").strip(), "version": int(m.group("ver")), "alias": None}
 
-    return trk, muri
+        # Solo nombre
+        return {"name": s, "version": None, "alias": None}
 
-def fallback_local_model() -> str | None:
-    # orden de preferencia: XGB, RF, LogReg
-    candidates = [
-        os.path.join("models", "model_xgb.joblib"),
-        os.path.join("models", "model_rf.joblib"),
-        os.path.join("models", "model.joblib"),
-    ]
+    # Caso dict: claves variadas
+    if isinstance(champ, dict):
+        lk = {str(k).lower(): v for k, v in champ.items()}
+        name = lk.get("name") or lk.get("model") or lk.get("registered_model") or lk.get("model_name")
+        version = lk.get("version") or lk.get("model_version") or lk.get("v")
+        alias = lk.get("alias")
+
+        # Si vino un URI directo
+        uri = lk.get("uri")
+        if (not name) and isinstance(uri, str) and uri.lower().startswith("models:/"):
+            spec = uri.split("models:/", 1)[1]
+            if "@" in spec:
+                name, alias = spec.split("@", 1)
+                return {"name": name.strip(), "version": None, "alias": alias.strip()}
+            if "/" in spec:
+                name, ver = spec.split("/", 1)
+                return {"name": name.strip(), "version": int(ver), "alias": None}
+            return {"name": spec.strip(), "version": None, "alias": None}
+
+        if not name:
+            raise ValueError(f"Estructura inesperada en champion dict: {champ}")
+        try:
+            version = int(version) if version is not None else None
+        except Exception:
+            version = None
+        return {"name": str(name), "version": version, "alias": alias}
+
+    raise ValueError(f"Tipo de 'champion' no soportado: {type(champ)}")
+
+def load_threshold(thr_file, default=0.5):
+    if not thr_file:
+        return default
+    try:
+        with open(thr_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return float(data.get("best_threshold", data.get("threshold", default)))
+    except Exception:
+        return default
+
+def infer_threshold_file(model_name):
+    n = (model_name or "").lower()
+    candidates = []
+    if "xgb" in n:
+        candidates.append("artifacts/best_threshold_xgb.json")
+    elif "rf" in n or "randomforest" in n:
+        candidates.append("artifacts/best_threshold_rf.json")
+    # genérico al final
+    candidates.append("artifacts/best_threshold.json")
     for p in candidates:
         if os.path.exists(p):
             return p
@@ -49,108 +92,62 @@ def fallback_local_model() -> str | None:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--test", required=True, help="CSV con el set de test")
-    ap.add_argument("--out", required=True, help="CSV de salida con predicciones")
-    ap.add_argument("--selection", default=os.path.join("artifacts", "selection.json"),
-                    help="selection.json con el campeón")
-    ap.add_argument("--mlflow-uri", default=os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5001"))
-    ap.add_argument("--threshold-file", default=None, help="JSON con best_threshold")
-    ap.add_argument("--threshold", type=float, default=None, help="Umbral manual (sobrescribe threshold-file)")
+    ap.add_argument("--test", required=True)
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--mlflow-uri", required=True)
+    ap.add_argument("--selection", default="artifacts/selection.json")
+    ap.add_argument("--threshold-file", default=None)
+    ap.add_argument("--threshold", type=float, default=None)
     args = ap.parse_args()
 
-    # Leer selección
-    tracking_uri = args.mlflow_uri
-    model_uri = None
-    local_model_path = None
+    mlflow.set_tracking_uri(args.mlflow_uri)
 
-    if os.path.exists(args.selection):
-        with open(args.selection, "r", encoding="utf-8") as f:
-            sel = json.load(f)
-        trk, muri = infer_uri_from_selection(sel)
-        if trk:
-            tracking_uri = trk
-        if muri:
-            model_uri = muri
-        # opcionalmente permitimos ruta local directa
-        if sel.get("local_model_path"):
-            local_model_path = sel["local_model_path"]
+    sel = parse_selection(args.selection)
+    name, version, alias = sel["name"], sel["version"], sel["alias"]
 
-    # Cargar modelo
-    model = None
-    used = ""
-    if model_uri and mlflow is not None:
-        try:
-            mlflow.set_tracking_uri(tracking_uri)
-            model = mlflow.pyfunc.load_model(model_uri)
-            used = f"mlflow:{model_uri}"
-        except Exception as e:
-            print(f"[WARN] No se pudo cargar desde MLflow ({e}). Intento local...", file=sys.stderr)
+    if alias:
+        model_uri = f"models:/{name}@{alias}"
+    elif version is not None:
+        model_uri = f"models:/{name}/{version}"
+    else:
+        # fallback razonable si no hay version/alias
+        model_uri = f"models:/{name}/Staging"
 
-    if model is None:
-        if local_model_path and os.path.exists(local_model_path):
-            model = joblib.load(local_model_path)
-            used = f"local:{local_model_path}"
+    model = mlflow.pyfunc.load_model(model_uri)
+
+    df = pd.read_csv(args.test)
+    ycol = "Churn" if "Churn" in df.columns else None
+    X = df.drop(columns=[ycol]) if ycol else df
+
+    # Probabilidades si existen
+    proba = None
+    try:
+        if hasattr(model, "predict_proba"):
+            proba = model.predict_proba(X)[:, 1]
         else:
-            fpath = fallback_local_model()
-            if not fpath:
-                raise FileNotFoundError("No se encontró un modelo local en models/ ni se pudo cargar desde MLflow.")
-            model = joblib.load(fpath)
-            used = f"local:{fpath}"
-
-    print(f"[INFO] Modelo usado -> {used}")
+            try:
+                sk = model.unwrap_python_model().model  # para sklearn envuelto
+                proba = sk.predict_proba(X)[:, 1]
+            except Exception:
+                pass
+    except Exception:
+        pass
 
     # Umbral
-    thr = args.threshold if args.threshold is not None else load_threshold(args.threshold_file)
-    print(f"[INFO] Umbral = {thr:.4f}")
+    thr_file = args.threshold_file or infer_threshold_file(name)
+    thr = args.threshold if args.threshold is not None else load_threshold(thr_file, 0.5)
 
-    # Datos
-    df = pd.read_csv(args.test)
-    # Intentamos preservar un id si existe
-    id_col = None
-    for cand in ["customerID", "customer_id", "id"]:
-        if cand in df.columns:
-            id_col = cand
-            break
+    if proba is None:
+        pred = model.predict(X)
+        out = pd.DataFrame({"pred": pred})
+        out.to_csv(args.out, index=False)
+        print(f"[OK] preds (sin proba) -> {args.out}")
+        return
 
-    # Quitar target si viene presente
-    for tgt in ["Churn", "churn", "target", "Revenue"]:
-        if tgt in df.columns:
-            df = df.drop(columns=[tgt])
-
-    X = df.copy()
-
-    # Predicción
-    proba = None
-    yhat = None
-    # si es pyfunc, predict puede devolver clase. Intentamos proba si existe
-    if hasattr(model, "predict_proba"):
-        try:
-            proba = model.predict_proba(X)
-            if isinstance(proba, (list, tuple)):
-                proba = np.asarray(proba)
-            p1 = proba[:, 1]
-            yhat = (p1 >= thr).astype(int)
-        except Exception as e:
-            print(f"[WARN] predict_proba falló ({e}), uso predict()", file=sys.stderr)
-            yhat = model.predict(X)
-            p1 = np.full(len(yhat), np.nan)
-    else:
-        try:
-            preds = model.predict(X)
-            yhat = preds if isinstance(preds, np.ndarray) else np.asarray(preds)
-            p1 = np.full(len(yhat), np.nan)
-        except Exception as e:
-            raise RuntimeError(f"No se pudo predecir con el modelo: {e}")
-
-    out = pd.DataFrame({
-        **({id_col: df[id_col]} if id_col else {}),
-        "proba": p1,
-        "pred": yhat.astype(int)
-    })
-
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+    pred = (proba >= thr).astype(int)
+    out = pd.DataFrame({"prob_1": proba, "pred": pred})
     out.to_csv(args.out, index=False)
-    print(f"[OK] Predicciones -> {args.out} | n={len(out)}")
+    print(f"[OK] preds con umbral={thr:.4f} -> {args.out}")
 
 if __name__ == "__main__":
     main()
