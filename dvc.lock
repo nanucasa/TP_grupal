@@ -664,10 +664,10 @@ stages:
       size: 1576
     - path: scripts\alias_champion.py
       hash: md5
-      md5: 1139ac0071063ba95c41bb82b3d7bbcf
+      md5: bd10bc869864903a7ba7ac2a1f4cd040
       size: 5444
     outs:
     - path: artifacts\aliases_applied.json
       hash: md5
-      md5: dc0c48da32fce9c9057c98eeabed3b63
+      md5: 5776c296ecb88034d7d71dafc3f89dd0
       size: 238
