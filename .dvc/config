@@ -8,4 +8,3 @@
     url = C:\dvc_prueba\.dvc\remote-cache
 ['remote "dagshub"']
     url = https://dagshub.com/nanucasa/TP_grupal.dvc
-    auth = basic
