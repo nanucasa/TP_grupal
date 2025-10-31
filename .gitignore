@@ -19,3 +19,4 @@ ECHO est  activado.
 !reports/
 !reports/benchmark.md
 !reports/f1_bench.png
+.dvc/config.bak
