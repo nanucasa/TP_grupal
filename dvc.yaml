@@ -87,7 +87,6 @@ stages:
       - data/processed/valid.csv
     outs:
       - artifacts/best_params_rf.json
-    metrics:
       - metrics_tune_rf.json
 
   train_rf:
@@ -226,4 +225,3 @@ stages:
       - artifacts/selection.json
     outs:
       - artifacts/aliases_applied.json
-

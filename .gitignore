@@ -20,3 +20,6 @@ ECHO est  activado.
 !reports/benchmark.md
 !reports/f1_bench.png
 .dvc/config.bak
+/metrics_tune.json
+/metrics.json
+/metrics_test.json
