@@ -4,16 +4,16 @@ stages:
     cmd: python src\data_prep.py --input data\raw\telco_churn.csv --outdir 
       data\processed --seed 42 --test-size 0.2 --val-size 0.1
     deps:
-    - path: data\raw\telco_churn.csv
+    - path: data/raw/telco_churn.csv
       hash: md5
       md5: 25e331349d6fc3e8608b1deaf35f4c71
       size: 882933
-    - path: src\data_prep.py
+    - path: src/data_prep.py
       hash: md5
       md5: aefaa2cac76a71bb4f666e6c300b1912
       size: 4989
     outs:
-    - path: data\processed
+    - path: data/processed
       hash: md5
       md5: 614060690e60b1ab4f301e442dd7136f.dir
       size: 1023708
@@ -396,32 +396,32 @@ stages:
       --train-out data\features\train_fe.csv --valid-out 
       data\features\valid_fe.csv --test-out data\features\test_fe.csv
     deps:
-    - path: data\processed\test.csv
+    - path: data/processed/test.csv
       hash: md5
       md5: 504c23a16229ee2680239bd7f5206d4c
       size: 204688
-    - path: data\processed\train.csv
+    - path: data/processed/train.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
       size: 715729
-    - path: data\processed\valid.csv
+    - path: data/processed/valid.csv
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
-    - path: src\feature_eng.py
+    - path: src/feature_eng.py
       hash: md5
       md5: 679cf724db1dffbd0209409f97225244
       size: 1368
     outs:
-    - path: data\features\test_fe.csv
+    - path: data/features/test_fe.csv
       hash: md5
       md5: 504c23a16229ee2680239bd7f5206d4c
       size: 204688
-    - path: data\features\train_fe.csv
+    - path: data/features/train_fe.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
       size: 715729
-    - path: data\features\valid_fe.csv
+    - path: data/features/valid_fe.csv
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
