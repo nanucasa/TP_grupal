@@ -171,24 +171,20 @@ stages:
       data\processed\valid.csv --params params.yaml --best-out 
       artifacts\best_params_rf.json --metrics-out metrics_tune_rf.json
     deps:
-    - path: data\processed\train.csv
+    - path: data/processed/train.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
       size: 715729
-    - path: data\processed\valid.csv
+    - path: data/processed/valid.csv
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
-    - path: params.yaml
-      hash: md5
-      md5: 95eb94c4986788e34575257a4a2ade9e
-      size: 733
-    - path: src\tune_rf.py
+    - path: src/tune_rf.py
       hash: md5
       md5: 826db2dd7b03e243cc5ab8e7778686ff
       size: 3211
     outs:
-    - path: artifacts\best_params_rf.json
+    - path: artifacts/best_params_rf.json
       hash: md5
       md5: c71fa5d6dea7e9064e8986b26093b647
       size: 73
@@ -202,28 +198,31 @@ stages:
       metrics_rf.json --best-params artifacts\best_params_rf.json --params 
       params.yaml
     deps:
-    - path: artifacts\best_params_rf.json
+    - path: artifacts/best_params_rf.json
       hash: md5
       md5: c71fa5d6dea7e9064e8986b26093b647
       size: 73
-    - path: data\processed\train.csv
+    - path: data/processed/train.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
       size: 715729
-    - path: data\processed\valid.csv
+    - path: data/processed/valid.csv
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
-    - path: src\train_rf.py
+    - path: src/train_rf.py
       hash: md5
       md5: 5b33c7e164067f89cc28bb8f82bdeb76
       size: 4533
+    params:
+      params.yaml:
+        train.seed: 42
     outs:
     - path: metrics_rf.json
       hash: md5
       md5: db1a437ed01b94c1b9d1e3dd744bec94
       size: 263
-    - path: models\model_rf.joblib
+    - path: models/model_rf.joblib
       hash: md5
       md5: d9e1861e80bee5fe892daf8cb4d1ee4d
       size: 1576329
@@ -231,15 +230,15 @@ stages:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
       models\model_rf.joblib --metrics-out metrics_test_rf.json
     deps:
-    - path: data\processed\test.csv
+    - path: data/processed/test.csv
       hash: md5
       md5: 504c23a16229ee2680239bd7f5206d4c
       size: 204688
-    - path: models\model_rf.joblib
+    - path: models/model_rf.joblib
       hash: md5
       md5: d9e1861e80bee5fe892daf8cb4d1ee4d
       size: 1576329
-    - path: src\evaluate.py
+    - path: src/evaluate.py
       hash: md5
       md5: 682ce56ccf5862239c62c6ebc55c9dd9
       size: 2503
@@ -432,19 +431,19 @@ stages:
       metrics_fe.json --best-params artifacts\best_params.json --params 
       params.yaml
     deps:
-    - path: artifacts\best_params.json
+    - path: artifacts/best_params.json
       hash: md5
-      md5: d20390841c946883c84aef457b51248d
-      size: 37
-    - path: data\features\train_fe.csv
+      md5: 193b8691bacab1355fb19eb822374330
+      size: 38
+    - path: data/features/train_fe.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
       size: 715729
-    - path: data\features\valid_fe.csv
+    - path: data/features/valid_fe.csv
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
-    - path: src\train.py
+    - path: src/train.py
       hash: md5
       md5: 6b4a402b8d1bcf0676f65bdf3d0befd4
       size: 4349
@@ -456,11 +455,11 @@ stages:
     outs:
     - path: metrics_fe.json
       hash: md5
-      md5: e304825870467993bc163fdd4a5a4c2b
-      size: 223
-    - path: models\model_fe.joblib
+      md5: 01215ad27de48e363ac6d0c2332e378b
+      size: 224
+    - path: models/model_fe.joblib
       hash: md5
-      md5: a7840a2b37e912b68871565b41bf4cf4
+      md5: df913044db5d87814e46d4390f3b6f77
       size: 1886
   threshold_fe:
     cmd: python src\threshold.py --valid data\features\valid_fe.csv --model 
@@ -501,23 +500,23 @@ stages:
     cmd: python src\evaluate.py --test data\features\test_fe.csv --model 
       models\model_fe.joblib --metrics-out metrics_test_fe.json
     deps:
-    - path: data\features\test_fe.csv
+    - path: data/features/test_fe.csv
       hash: md5
       md5: 504c23a16229ee2680239bd7f5206d4c
       size: 204688
-    - path: models\model_fe.joblib
+    - path: models/model_fe.joblib
       hash: md5
-      md5: a7840a2b37e912b68871565b41bf4cf4
+      md5: df913044db5d87814e46d4390f3b6f77
       size: 1886
-    - path: src\evaluate.py
+    - path: src/evaluate.py
       hash: md5
       md5: 682ce56ccf5862239c62c6ebc55c9dd9
       size: 2503
     outs:
     - path: metrics_test_fe.json
       hash: md5
-      md5: 071df9b5991e98dc27b376ca493d7ffd
-      size: 243
+      md5: 9d28f195d38488d24f1034b4f1bfcec0
+      size: 241
   select_register:
     cmd: python scripts\select_and_register.py --mlflow-uri 
       http://127.0.0.1:5001 --write-out artifacts\selection.json

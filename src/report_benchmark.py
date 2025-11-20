@@ -1,57 +1,118 @@
-# Genera un reporte comparativo (MD + PNG) con métricas de test de LogReg, RF y XGB.
+import argparse
+import json
+import os
 
-import json, os
-from pathlib import Path
 import matplotlib.pyplot as plt
 
-ROOT = Path(".")
-OUT_MD = ROOT / "reports" / "benchmark.md"
-OUT_IMG = ROOT / "reports" / "f1_bench.png"
 
-files = {
-    "LogReg": ROOT / "metrics_test.json",
-    "RF":     ROOT / "metrics_test_rf.json",
-    "XGB":    ROOT / "metrics_test_xgb.json",
-}
+def infer_label(path: str) -> str:
+    """
+    Devuelve un nombre legible a partir del nombre de archivo de métricas.
+    """
+    name = os.path.basename(path)
+    if name == "metrics_test.json":
+        return "LogReg baseline"
+    if name == "metrics_test_rf.json":
+        return "RandomForest"
+    if name == "metrics_test_xgb.json":
+        return "XGBoost"
+    if name == "metrics_test_fe.json":
+        return "LogReg FE"
+    return name
 
-def load_metrics(p):
-    try:
-        with open(p, "r", encoding="utf-8") as f:
-            j = json.load(f)
-        return j.get("test", {})
-    except Exception:
-        return {}
 
-rows = []
-for model, path in files.items():
-    m = load_metrics(path)
-    rows.append({
-        "model": model,
-        "threshold": m.get("threshold", ""),
-        "accuracy": m.get("accuracy", ""),
-        "precision": m.get("precision", ""),
-        "recall": m.get("recall", ""),
-        "f1": m.get("f1", ""),
-        "roc_auc": m.get("roc_auc", ""),
-        "pr_ap": m.get("pr_ap", ""),
-    })
+def load_f1(path: str) -> float:
+    """
+    Lee un archivo JSON de métricas y devuelve el F1.
+    Prioriza la clave 'test', si no está usa 'valid'.
+    """
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
 
-# Markdown
-os.makedirs(OUT_MD.parent, exist_ok=True)
-header = ["Model","Threshold","Accuracy","Precision","Recall","F1","ROC_AUC","PR_AP"]
-md = ["| " + " | ".join(header) + " |", "|" + "|".join(["---"]*len(header)) + "|"]
-for r in rows:
-    md.append("| " + " | ".join(str(r[k]) if r[k] != "" else "" for k in ["model","threshold","accuracy","precision","recall","f1","roc_auc","pr_ap"]) + " |")
-OUT_MD.write_text("\n".join(md) + "\n", encoding="utf-8")
+    if "test" in data and "f1" in data["test"]:
+        return data["test"]["f1"]
 
-# Gráfico F1
-labels = [r["model"] for r in rows]
-f1_vals = [float(r["f1"]) if r["f1"] != "" else 0.0 for r in rows]
-plt.figure(figsize=(6,4))
-plt.bar(labels, f1_vals)
-plt.title("F1 (Test) por Modelo")
-plt.ylabel("F1")
-plt.ylim(0, 1)
-plt.tight_layout()
-plt.savefig(OUT_IMG, dpi=150)
-print("[OK] Reporte generado:", OUT_MD, "|", OUT_IMG)
+    if "valid" in data and "f1" in data["valid"]:
+        return data["valid"]["f1"]
+
+    raise KeyError(f"No se encontró 'f1' en {path}")
+
+
+def generate_report(sources, out_md: str, out_fig: str):
+    """
+    Genera:
+    - Un markdown con tabla de F1 en test.
+    - Una figura tipo barra con F1 por modelo.
+    """
+    rows = []
+    for src in sources:
+        f1 = load_f1(src)
+        label = infer_label(src)
+        rows.append({"label": label, "f1": f1})
+
+    # Ordenar por F1 descendente (mejor primero)
+    rows.sort(key=lambda r: r["f1"], reverse=True)
+
+    # Markdown (UTF-8, sin caracteres raros)
+    with open(out_md, "w", encoding="utf-8") as f:
+        f.write("# Benchmark modelos (F1 test)\n\n")
+        f.write("| Modelo | F1 test |\n")
+        f.write("|--------|---------|\n")
+        for r in rows:
+            f.write(f"| {r['label']} | {r['f1']:.4f} |\n")
+
+        best = rows[0]
+        f.write(
+            f"\nModelo ganador (mayor F1): **{best['label']}** "
+            f"con F1 = {best['f1']:.4f}.\n"
+        )
+
+    # Figura de barras
+    labels = [r["label"] for r in rows]
+    scores = [r["f1"] for r in rows]
+
+    plt.figure(figsize=(6, 4))
+    plt.bar(labels, scores)
+    plt.ylabel("F1 test")
+    plt.tight_layout()
+    plt.savefig(out_fig, bbox_inches="tight")
+    plt.close()
+
+    return rows
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Genera benchmark de modelos a partir de métricas en JSON."
+    )
+    parser.add_argument(
+        "--sources",
+        nargs="+",
+        required=True,
+        help="Rutas a archivos de métricas JSON (test).",
+    )
+    parser.add_argument(
+        "--out-md",
+        required=True,
+        help="Ruta de salida para el reporte en Markdown.",
+    )
+    parser.add_argument(
+        "--out-fig",
+        required=True,
+        help="Ruta de salida para la figura (PNG).",
+    )
+
+    args = parser.parse_args()
+
+    rows = generate_report(args.sources, args.out_md, args.out_fig)
+
+    # Mensaje simple para el log
+    best = rows[0]
+    print(
+        f"[OK] Reporte generado: {args.out_md} | {args.out_fig} "
+        f"| mejor modelo = {best['label']} (F1={best['f1']:.4f})"
+    )
+
+
+if __name__ == "__main__":
+    main()
