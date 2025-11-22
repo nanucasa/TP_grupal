@@ -1,5 +1,8 @@
 from pathlib import Path
 
+import os
+import json
+
 import matplotlib.pyplot as plt
 import mlflow
 import pandas as pd
@@ -268,4 +271,26 @@ def roc_curve_fe(context, test_metrics: pd.DataFrame) -> str:
     )
 
     return str(image_path)
+
+
+@asset
+def champion_run():
+    """
+    Lee artifacts/champion_run.json (generado por scripts/update_champion_from_runs.py
+    en C:\dvc_prueba) y lo expone como asset en Dagster.
+    """
+    # assets.py está en:
+    # C:\dvc_prueba\tp_grupal_dagster\tp_grupal_dagster\assets.py
+    # repo_root = C:\dvc_prueba
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    path = os.path.join(repo_root, "artifacts", "champion_run.json")
+
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    return data
+
+
+
+
 

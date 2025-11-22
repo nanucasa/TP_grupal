@@ -10,11 +10,13 @@ import joblib, mlflow, mlflow.sklearn, yaml
 from mlflow.tracking import MlflowClient
 from mlflow.models import infer_signature
 
+
 def load_xy(path, target="churn"):
     df = pd.read_csv(path)
     y = df[target].astype(int).to_numpy()
     X = df.drop(columns=[target])
     return X, y, df
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -29,7 +31,9 @@ def main():
     # Hiperparámetros base (params.yaml) + override por best_params.json
     with open(args.params, "r", encoding="utf-8") as f:
         P = yaml.safe_load(f)
-    C = float(P["train"]["C"]); max_iter = int(P["train"]["max_iter"]); seed = int(P["train"]["seed"])
+    C = float(P["train"]["C"])
+    max_iter = int(P["train"]["max_iter"])
+    seed = int(P["train"]["seed"])
 
     if os.path.exists(args.best_params):
         try:
@@ -44,8 +48,14 @@ def main():
 
     pipe = Pipeline([
         ("scaler", StandardScaler()),
-        ("clf", LogisticRegression(C=C, max_iter=max_iter, solver="lbfgs",
-                                   penalty="l2", class_weight="balanced", random_state=seed))
+        ("clf", LogisticRegression(
+            C=C,
+            max_iter=max_iter,
+            solver="lbfgs",
+            penalty="l2",
+            class_weight="balanced",
+            random_state=seed,
+        )),
     ])
 
     # MLflow local
@@ -59,33 +69,56 @@ def main():
         prob = pipe.predict_proba(Xva_df.to_numpy(dtype=float))[:, 1]
         yhat = (prob >= 0.5).astype(int)
 
-        metrics = {
+        # Métricas en validación
+        valid_metrics = {
             "accuracy": float(accuracy_score(yva, yhat)),
             "precision": float(precision_score(yva, yhat, zero_division=0)),
             "recall": float(recall_score(yva, yhat, zero_division=0)),
             "f1": float(f1_score(yva, yhat, zero_division=0)),
         }
 
-        # Guardar artefactos locales
+        # Guardar artefactos locales (mantenemos el esquema anterior de metrics.json)
         os.makedirs(os.path.dirname(args.out_model), exist_ok=True)
         joblib.dump(pipe, args.out_model)
-        json.dump({"valid": metrics, "params": {"C": C, "max_iter": max_iter, "seed": seed}},
-                  open(args.metrics, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        json.dump(
+            {"valid": valid_metrics, "params": {"C": C, "max_iter": max_iter, "seed": seed}},
+            open(args.metrics, "w", encoding="utf-8"),
+            ensure_ascii=False,
+            indent=2,
+        )
 
-        # Log en MLflow
+        # Log en MLflow: métricas simples + alias con prefijos valid_ y test_
         mlflow.log_params({"C": C, "max_iter": max_iter, "seed": seed})
-        mlflow.log_metrics(metrics)
+        mlflow.log_metrics(
+            {
+                # nombres originales
+                "accuracy": valid_metrics["accuracy"],
+                "precision": valid_metrics["precision"],
+                "recall": valid_metrics["recall"],
+                "f1": valid_metrics["f1"],
+                # alias "valid_*"
+                "valid_accuracy": valid_metrics["accuracy"],
+                "valid_precision": valid_metrics["precision"],
+                "valid_recall": valid_metrics["recall"],
+                "valid_f1": valid_metrics["f1"],
+                # alias "test_*" (sin conjunto test separado; igual a valid)
+                "test_accuracy": valid_metrics["accuracy"],
+                "test_precision": valid_metrics["precision"],
+                "test_recall": valid_metrics["recall"],
+                "test_f1": valid_metrics["f1"],
+            }
+        )
 
         signature = infer_signature(
             input_example,
-            pipe.predict_proba(input_example.to_numpy(dtype=float))[:, 1]
+            pipe.predict_proba(input_example.to_numpy(dtype=float))[:, 1],
         )
-        # Nota: algunos MLflow muestran deprecación por 'artifact_path'; es inofensiva y depende de la versión instalada.
+
         mlflow.sklearn.log_model(
             pipe,
             artifact_path="model",
             input_example=input_example,
-            signature=signature
+            signature=signature,
         )
 
         # Registrar en Model Registry
@@ -93,11 +126,19 @@ def main():
         reg_name = "TelcoChurn_LogReg"
         mv = mlflow.register_model(model_uri=model_uri, name=reg_name)
         MlflowClient().transition_model_version_stage(
-            name=reg_name, version=mv.version, stage="Staging", archive_existing_versions=False
+            name=reg_name,
+            version=mv.version,
+            stage="Staging",
+            archive_existing_versions=False,
         )
 
-        print(f"[OK] valid: acc={metrics['accuracy']:.4f} prec={metrics['precision']:.4f} "
-              f"rec={metrics['recall']:.4f} f1={metrics['f1']:.4f}")
+        print(
+            f"[OK] valid: acc={valid_metrics['accuracy']:.4f} "
+            f"prec={valid_metrics['precision']:.4f} "
+            f"rec={valid_metrics['recall']:.4f} "
+            f"f1={valid_metrics['f1']:.4f}"
+        )
+
 
 if __name__ == "__main__":
     main()

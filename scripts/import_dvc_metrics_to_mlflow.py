@@ -1,88 +1,129 @@
+import os
 import json
 from pathlib import Path
+
 import mlflow
+from mlflow.tracking import MlflowClient
 
 
-def filename_to_experiment(fname: str) -> str:
-    """Mapea cada metrics_*.json a un experimento MLflow."""
-    mapping = {
-        "metrics.json": "telco_churn_baseline",
-        "metrics_fe.json": "telco_churn_baseline_fe",
-        "metrics_rf.json": "telco_churn_baseline_rf",
-        "metrics_xgb.json": "telco_churn_baseline_xgb",
-        "metrics_test.json": "telco_churn_test",
-        "metrics_test_fe.json": "telco_churn_test_fe",
-        "metrics_test_rf.json": "telco_churn_test_rf",
-        "metrics_test_xgb.json": "telco_churn_test_xgb",
-        "metrics_tune.json": "telco_churn_tune",
-        "metrics_tune_rf.json": "telco_churn_tune_rf",
-        "metrics_tune_xgb.json": "telco_churn_tune_xgb",
-        "metrics_threshold.json": "telco_churn_threshold",
-        "metrics_threshold_fe.json": "telco_churn_threshold_fe",
-        "metrics_threshold_xgb.json": "telco_churn_threshold_xgb",
-    }
-    return mapping.get(fname, "telco_churn_imported")
+# ---------------------------------------------------------------------
+# Configuración
+# ---------------------------------------------------------------------
+
+# Raíz del repo: C:\dvc_prueba
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+# Nombre del experimento donde SIEMPRE vamos a registrar todo
+EXPERIMENT_NAME = "telco_churn_tune_xgb"
+
+# Tracking URI de MLflow
+# - Si tenés MLFLOW_TRACKING_URI en el entorno, se usa ese.
+# - Si no, usa el remoto de DagsHub de este proyecto.
+DEFAULT_DAGSHUB_MLFLOW_URI = "https://dagshub.com/nanucasa/TP_grupal.mlflow"
 
 
-def log_one_file(path: Path) -> None:
-    fname = path.name
-    experiment_name = filename_to_experiment(fname)
+def get_tracking_uri() -> str:
+    uri_env = os.getenv("MLFLOW_TRACKING_URI")
+    if uri_env:
+        print(f"Usando MLFLOW_TRACKING_URI desde entorno: {uri_env}")
+        return uri_env
 
+    print(f"Usando tracking URI por defecto de DagsHub: {DEFAULT_DAGSHUB_MLFLOW_URI}")
+    return DEFAULT_DAGSHUB_MLFLOW_URI
+
+
+# ---------------------------------------------------------------------
+# Utilidades
+# ---------------------------------------------------------------------
+
+def load_metrics_json(path: Path) -> dict:
+    """
+    Lee un JSON de métricas y devuelve solo pares clave:valor numéricos.
+    Si hay diccionarios anidados, los aplana con nombre compuesto.
+    """
     with path.open("r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # Usa el tracking URI definido en las variables de entorno
-    mlflow.set_experiment(experiment_name)
+    if not isinstance(data, dict):
+        raise ValueError(f"El archivo {path} no contiene un dict de métricas.")
 
-    # Un run por archivo, identificado por el nombre del archivo
-    with mlflow.start_run(run_name=fname):
-        # métrica de validación
-        if "valid" in data and isinstance(data["valid"], dict):
-            mlflow.log_metrics(
-                {f"valid_{k}": float(v) for k, v in data["valid"].items()}
-            )
+    metrics = {}
 
-        # métrica de test
-        if "test" in data and isinstance(data["test"], dict):
-            mlflow.log_metrics(
-                {f"test_{k}": float(v) for k, v in data["test"].items()}
-            )
+    def add_numeric(prefix: str, obj):
+        if isinstance(obj, (int, float)):
+            metrics[prefix] = obj
+        elif isinstance(obj, dict):
+            for k, v in obj.items():
+                new_key = f"{prefix}_{k}" if prefix else k
+                add_numeric(new_key, v)
+        # Si es lista u otro tipo, lo ignoramos para mantenerlo simple
 
-        # métricas de búsqueda de threshold (si existen)
-        if "valid_threshold" in data and isinstance(data["valid_threshold"], dict):
-            mlflow.log_metrics(
-                {
-                    f"valid_threshold_{k}": float(v)
-                    for k, v in data["valid_threshold"].items()
-                }
-            )
+    add_numeric("", data)
 
-        # best_valid_f1 (tune / tune_xgb)
-        if "best_valid_f1" in data:
-            mlflow.log_metric("best_valid_f1", float(data["best_valid_f1"]))
+    # Limpiar posibles claves vacías
+    metrics = {k: v for k, v in metrics.items() if k}
 
-        # parámetros base
-        if "params" in data and isinstance(data["params"], dict):
-            mlflow.log_params({str(k): v for k, v in data["params"].items()})
-
-        # best_params (tuning RF / XGB / LogReg)
-        if "best_params" in data and isinstance(data["best_params"], dict):
-            mlflow.log_params(
-                {f"best_{k}": v for k, v in data["best_params"].items()}
-            )
-
-        # grid de búsqueda, lo guardo como JSON en un solo parámetro
-        if "grid" in data and isinstance(data["grid"], dict):
-            mlflow.log_param("grid", json.dumps(data["grid"]))
-
-        print(f"[OK] Importado {fname} en experimento '{experiment_name}'")
+    return metrics
 
 
 def main():
-    # Asumimos que corrés el script desde la raíz del repo (C:\\dvc_prueba)
-    base = Path(".")
-    for path in sorted(base.glob("metrics*.json")):
-        log_one_file(path)
+    # Configurar tracking remoto
+    tracking_uri = get_tracking_uri()
+    mlflow.set_tracking_uri(tracking_uri)
+
+    # Asegurarnos de usar SIEMPRE este experimento
+    mlflow.set_experiment(EXPERIMENT_NAME)
+    client = MlflowClient()
+    exp = client.get_experiment_by_name(EXPERIMENT_NAME)
+
+    if exp is None:
+        raise RuntimeError(
+            f"No se pudo crear/obtener el experimento '{EXPERIMENT_NAME}' en {tracking_uri}"
+        )
+
+    print(f"Usando experimento '{EXPERIMENT_NAME}' (id={exp.experiment_id})")
+
+    # Buscar todos los archivos metrics*.json en la raíz del repo
+    metrics_files = sorted(PROJECT_ROOT.glob("metrics*.json"))
+
+    if not metrics_files:
+        print("No se encontraron archivos metrics*.json en la raíz del repo.")
+        return
+
+    print("Archivos de métricas encontrados:")
+    for p in metrics_files:
+        print(f"  - {p.name}")
+
+    # Importar cada archivo como un run separado
+    for path in metrics_files:
+        try:
+            metrics = load_metrics_json(path)
+        except Exception as e:
+            print(f"[ERROR] No se pudo leer {path.name}: {e}")
+            continue
+
+        if not metrics:
+            print(f"[SKIP] {path.name} no tiene métricas numéricas para registrar.")
+            continue
+
+        run_name = path.stem  # p.ej. 'metrics_xgb', 'metrics_test_xgb', etc.
+
+        print(f"[RUN] Creando run para {path.name} en '{EXPERIMENT_NAME}'...")
+
+        with mlflow.start_run(
+            run_name=run_name,
+            experiment_id=exp.experiment_id,
+        ):
+            # Métricas
+            mlflow.log_metrics(metrics)
+
+            # Tags útiles para filtrar en MLflow
+            mlflow.set_tag("source", "dvc_metrics_json")
+            mlflow.set_tag("metrics_file", str(path.name))
+
+        print(f"[OK] Importado {path.name} en experimento '{EXPERIMENT_NAME}'")
+
+    print("Importación de métricas finalizada.")
 
 
 if __name__ == "__main__":
