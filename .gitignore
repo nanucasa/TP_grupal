@@ -37,3 +37,6 @@ tp_grupal_dagster/.tmp_dagster_home_*/
 
 # Metadata de instalación editable de Python
 tp_grupal_dagster/*.egg-info/
+/metrics_test_xgb.json
+/metrics_threshold.json
+/metrics_threshold_xgb.json

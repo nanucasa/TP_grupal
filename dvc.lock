@@ -137,35 +137,35 @@ stages:
       metrics_threshold.json --roc-out reports\roc_curve.png --pr-out 
       reports\pr_curve.png
     deps:
-    - path: data\processed\valid.csv
+    - path: data/processed/valid.csv
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
-    - path: models\model.joblib
+    - path: models/model.joblib
       hash: md5
-      md5: a7840a2b37e912b68871565b41bf4cf4
-      size: 1886
-    - path: src\threshold.py
+      md5: 704ee90e14fdb50cd5f13eab69e8fcf7
+      size: 1921
+    - path: src/threshold.py
       hash: md5
       md5: 71e2e6bb6a7306312586cda7c1de76a4
       size: 4262
     outs:
-    - path: artifacts\best_threshold.json
+    - path: artifacts/best_threshold.json
       hash: md5
-      md5: 6e4d6bc56e8088e8163e7e8523ac780f
-      size: 44
+      md5: ffe77e0869a421d4368205dbf57278b8
+      size: 45
     - path: metrics_threshold.json
       hash: md5
       md5: 30a56a4e82f029f92d6f6e34bac7d66e
       size: 226
-    - path: reports\pr_curve.png
+    - path: reports/pr_curve.png
       hash: md5
-      md5: b1a9802df3b5c7c1cc2dcbe6794c4cf3
-      size: 21428
-    - path: reports\roc_curve.png
+      md5: d54fa2ef7d33824637c7f2f9f7d15d8c
+      size: 21406
+    - path: reports/roc_curve.png
       hash: md5
-      md5: 335da4793b09a75a4ede833f9cf2ec6a
-      size: 21047
+      md5: 533e39cd614f80db3699f0ea0faa852f
+      size: 21015
   tune_rf:
     cmd: python src\tune_rf.py --train data\processed\train.csv --valid 
       data\processed\valid.csv --params params.yaml --best-out 
@@ -313,35 +313,35 @@ stages:
       --metrics-out metrics_threshold_xgb.json --roc-out 
       reports\roc_curve_xgb.png --pr-out reports\pr_curve_xgb.png
     deps:
-    - path: data\processed\valid.csv
+    - path: data/processed/valid.csv
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
-    - path: models\model_xgb.joblib
+    - path: models/model_xgb.joblib
       hash: md5
-      md5: d35a1a2e10a839c822d69cefde571a6a
-      size: 353662
-    - path: src\threshold.py
+      md5: af7ebc9e9ffe45488d6758ca63ea1078
+      size: 500273
+    - path: src/threshold.py
       hash: md5
       md5: 71e2e6bb6a7306312586cda7c1de76a4
       size: 4262
     outs:
-    - path: artifacts\best_threshold_xgb.json
+    - path: artifacts/best_threshold_xgb.json
       hash: md5
-      md5: ca765217a488351d33127da20c96ab3c
-      size: 44
+      md5: 545232af21c925a2cfb156ea68d09744
+      size: 45
     - path: metrics_threshold_xgb.json
       hash: md5
-      md5: c443f1ecf13f2484c235c041fe9b5426
-      size: 221
-    - path: reports\pr_curve_xgb.png
+      md5: 1de2bcd7d6e294b477c4a88515b0bd04
+      size: 230
+    - path: reports/pr_curve_xgb.png
       hash: md5
-      md5: 53f4c502b59eb81d3c195152a0981860
-      size: 21552
-    - path: reports\roc_curve_xgb.png
+      md5: 67dbf786c4b377239b57f6f6063a91d1
+      size: 20753
+    - path: reports/roc_curve_xgb.png
       hash: md5
-      md5: dabc3466c0491b079be2b0c908ba89ee
-      size: 21135
+      md5: 4d70a552da6cceaeb332cc5ffcbe47cc
+      size: 21029
   evaluate_test_xgb:
     cmd: python src/evaluate.py --test data/features/test_fe.csv --model 
       models/model_xgb.joblib --metrics-out metrics_test_xgb.json
@@ -534,37 +534,37 @@ stages:
       size: 241
     - path: metrics_test_xgb.json
       hash: md5
-      md5: cb8cfdbed298afc31f5fe8a7f63596f0
-      size: 243
-    - path: scripts\select_and_register.py
+      md5: b8b95749a2265b85e78c97210fa317f6
+      size: 242
+    - path: scripts/select_and_register.py
       hash: md5
       md5: beb6dbf11532e0dfc862d7d8f75f6f23
       size: 4312
     outs:
-    - path: artifacts\selection.json
+    - path: artifacts/selection.json
       hash: md5
-      md5: d55c2b55dbc57324226bdeab06199d02
-      size: 1576
+      md5: 19d24c1d16413aa623f27d26ca209ccd
+      size: 1574
   predict_champion:
     cmd: python scripts\predict_champion.py --test data\processed\test.csv --out
       predictions\preds_test_champion.csv --mlflow-uri http://127.0.0.1:5001
     deps:
-    - path: artifacts\selection.json
+    - path: artifacts/selection.json
       hash: md5
-      md5: 82f7a76fe23966db6ec189fd945616a9
-      size: 1576
-    - path: data\processed\test.csv
+      md5: 19d24c1d16413aa623f27d26ca209ccd
+      size: 1574
+    - path: data/processed/test.csv
       hash: md5
       md5: 504c23a16229ee2680239bd7f5206d4c
       size: 204688
-    - path: scripts\predict_champion.py
+    - path: scripts/predict_champion.py
       hash: md5
       md5: 834226dcf21b2b8d3e021eacc240bc24
       size: 5643
     outs:
-    - path: predictions\preds_test_champion.csv
+    - path: predictions/preds_test_champion.csv
       hash: md5
-      md5: 1b485c15dae173038880c403b457f70b
+      md5: 742447e073bbd2d89cca7219273ae663
       size: 6006
   predict_test_rf:
     cmd: python src\predict.py --input data\processed\test.csv --model 
@@ -657,16 +657,16 @@ stages:
       --selection artifacts\selection.json --alias champion --write-out 
       artifacts\aliases_applied.json
     deps:
-    - path: artifacts\selection.json
+    - path: artifacts/selection.json
       hash: md5
-      md5: d55c2b55dbc57324226bdeab06199d02
-      size: 1576
-    - path: scripts\alias_champion.py
+      md5: 19d24c1d16413aa623f27d26ca209ccd
+      size: 1574
+    - path: scripts/alias_champion.py
       hash: md5
       md5: bd10bc869864903a7ba7ac2a1f4cd040
       size: 5444
     outs:
-    - path: artifacts\aliases_applied.json
+    - path: artifacts/aliases_applied.json
       hash: md5
-      md5: 5776c296ecb88034d7d71dafc3f89dd0
-      size: 238
+      md5: 9aceaac64efc534a32fd2362e51f49fa
+      size: 237
