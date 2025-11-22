@@ -25,8 +25,8 @@ stages:
     deps:
     - path: artifacts/best_params.json
       hash: md5
-      md5: 193b8691bacab1355fb19eb822374330
-      size: 38
+      md5: d20390841c946883c84aef457b51248d
+      size: 37
     - path: data/processed/train.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
@@ -41,18 +41,18 @@ stages:
       size: 4349
     params:
       params.yaml:
-        train.C: 1.0
+        train.C: 10.0
         train.max_iter: 1000
         train.seed: 42
     outs:
     - path: metrics.json
       hash: md5
-      md5: 01215ad27de48e363ac6d0c2332e378b
-      size: 224
+      md5: e304825870467993bc163fdd4a5a4c2b
+      size: 223
     - path: models/model.joblib
       hash: md5
-      md5: df913044db5d87814e46d4390f3b6f77
-      size: 1886
+      md5: 704ee90e14fdb50cd5f13eab69e8fcf7
+      size: 1921
   evaluate_test:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
       models\model.joblib --metrics-out metrics_test.json
@@ -93,17 +93,17 @@ stages:
       size: 3993
     params:
       params.yaml:
-        train.C: 1.0
+        train.C: 10.0
         train.max_iter: 1000
         train.seed: 42
     outs:
     - path: artifacts/best_params.json
       hash: md5
-      md5: 193b8691bacab1355fb19eb822374330
-      size: 38
+      md5: d20390841c946883c84aef457b51248d
+      size: 37
     - path: metrics_tune.json
       hash: md5
-      md5: b4193262c09e4f66160203cecee9bf3b
+      md5: 482ef6db59ad12ae96c5019582ff020a
       size: 119
   predict_test:
     cmd: python src\predict.py --input data\processed\test.csv --model 
@@ -252,30 +252,26 @@ stages:
       data\processed\valid.csv --params params.yaml --best-out 
       artifacts\best_params_xgb.json --metrics-out metrics_tune_xgb.json
     deps:
-    - path: data\processed\train.csv
+    - path: data/processed/train.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
       size: 715729
-    - path: data\processed\valid.csv
+    - path: data/processed/valid.csv
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
-    - path: params.yaml
-      hash: md5
-      md5: 95eb94c4986788e34575257a4a2ade9e
-      size: 733
-    - path: src\tune_xgb.py
+    - path: src/tune_xgb.py
       hash: md5
       md5: 044e2f84f0326eb3c126937252450ef1
       size: 3088
     outs:
-    - path: artifacts\best_params_xgb.json
+    - path: artifacts/best_params_xgb.json
       hash: md5
-      md5: 5292a78f760cf7607db0069a05f83a4d
+      md5: dd37a9c90aba97fd35efae4fa56d2a1f
       size: 237
     - path: metrics_tune_xgb.json
       hash: md5
-      md5: 7f26a71f3eeb4e6d07fff2ba43bda940
+      md5: 9aa6dbf48df165cc58cbcb3a7cf03443
       size: 322
   train_xgb:
     cmd: python src\train_xgb.py --train data\processed\train.csv --valid 
@@ -283,31 +279,34 @@ stages:
       metrics_xgb.json --best-params artifacts\best_params_xgb.json --params 
       params.yaml
     deps:
-    - path: artifacts\best_params_xgb.json
+    - path: artifacts/best_params_xgb.json
       hash: md5
-      md5: 5292a78f760cf7607db0069a05f83a4d
+      md5: dd37a9c90aba97fd35efae4fa56d2a1f
       size: 237
-    - path: data\processed\train.csv
+    - path: data/processed/train.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
       size: 715729
-    - path: data\processed\valid.csv
+    - path: data/processed/valid.csv
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
-    - path: src\train_xgb.py
+    - path: src/train_xgb.py
       hash: md5
       md5: adbd9987afbb3c968b531900dbefb147
       size: 3550
+    params:
+      params.yaml:
+        train.seed: 42
     outs:
     - path: metrics_xgb.json
       hash: md5
-      md5: e18573c024ac686f5dbc507fcab1fce8
-      size: 424
-    - path: models\model_xgb.joblib
+      md5: 3ca7ecad3b238659e43b3b8f2b84d3dc
+      size: 441
+    - path: models/model_xgb.joblib
       hash: md5
-      md5: d35a1a2e10a839c822d69cefde571a6a
-      size: 353662
+      md5: af7ebc9e9ffe45488d6758ca63ea1078
+      size: 500273
   threshold_xgb:
     cmd: python src\threshold.py --valid data\processed\valid.csv --model 
       models\model_xgb.joblib --out-json artifacts\best_threshold_xgb.json 
@@ -433,8 +432,8 @@ stages:
     deps:
     - path: artifacts/best_params.json
       hash: md5
-      md5: 193b8691bacab1355fb19eb822374330
-      size: 38
+      md5: d20390841c946883c84aef457b51248d
+      size: 37
     - path: data/features/train_fe.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
@@ -449,18 +448,18 @@ stages:
       size: 4349
     params:
       params.yaml:
-        train.C: 1.0
+        train.C: 10.0
         train.max_iter: 1000
         train.seed: 42
     outs:
     - path: metrics_fe.json
       hash: md5
-      md5: 01215ad27de48e363ac6d0c2332e378b
-      size: 224
+      md5: e304825870467993bc163fdd4a5a4c2b
+      size: 223
     - path: models/model_fe.joblib
       hash: md5
-      md5: df913044db5d87814e46d4390f3b6f77
-      size: 1886
+      md5: 704ee90e14fdb50cd5f13eab69e8fcf7
+      size: 1921
   threshold_fe:
     cmd: python src\threshold.py --valid data\features\valid_fe.csv --model 
       models\model_fe.joblib --out-json artifacts\best_threshold_fe.json 

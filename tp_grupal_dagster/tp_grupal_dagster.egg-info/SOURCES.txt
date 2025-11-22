@@ -1,0 +1,12 @@
+README.md
+pyproject.toml
+setup.cfg
+setup.py
+tp_grupal_dagster/__init__.py
+tp_grupal_dagster/assets.py
+tp_grupal_dagster/definitions.py
+tp_grupal_dagster.egg-info/PKG-INFO
+tp_grupal_dagster.egg-info/SOURCES.txt
+tp_grupal_dagster.egg-info/dependency_links.txt
+tp_grupal_dagster.egg-info/requires.txt
+tp_grupal_dagster.egg-info/top_level.txt

@@ -12,3 +12,5 @@ mlflow>=2.9,<3
 # Utilidades
 requests>=2.31,<3
 
+# Modelos de gradiente boosting
+xgboost>=1.7,<4

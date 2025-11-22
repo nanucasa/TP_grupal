@@ -1,45 +1,95 @@
-# Parámetros globales de entrenamiento y tuning
+# Hiperparámetros base para la Regresión Logística (train.py)
 train:
-  C: 1.0
+  C: 10.0
   max_iter: 1000
+  random_state: 42
   seed: 42
 
+# Espacio de búsqueda para tune.py (Regresión Logística)
 tune:
-  cv: 1            # según tu script 'tune.py' (antes faltaba y daba KeyError)
+  C: [0.1, 1.0, 10.0]
+  max_iter: [100, 500, 1000]
+  cv: 3
+  scoring: f1
+  n_jobs: -1
+  seed: 42
+
+# RandomForest: espacio de búsqueda para tune_rf.py
+tune_rf:
+  n_estimators: [100, 200, 300]
+  max_depth: [3, 5, 10, null]
+  min_samples_split: [2, 5, 10]
+  min_samples_leaf: [1, 2, 4]
+  cv: 3
   scoring: f1
   n_jobs: -1
 
-# RandomForest: espacio de búsqueda para tune_rf.py
+# RandomForest: hiperparámetros por defecto para train_rf.py
+train_rf:
+  n_estimators: 300
+  max_depth: 5
+  min_samples_split: 5
+  min_samples_leaf: 1
+  n_jobs: -1
+  random_state: 42
+  seed: 42
+
+# Alias opcional para scripts que leen `rf` en lugar de `tune_rf`
 rf:
   param_grid:
-    n_estimators: [200, 300, 400]
-    max_depth: [None, 5, 8]
+    n_estimators: [100, 200, 300]
+    max_depth: [3, 5, 10, null]
     min_samples_split: [2, 5, 10]
-  random_state: 42
+    min_samples_leaf: [1, 2, 4]
+  cv: 3
+  scoring: f1
+  n_jobs: -1
 
-# XGBoost: espacio de búsqueda y defaults para tune_xgb.py
-xgb:
-  param_grid:
-    n_estimators: [200, 300, 500]
-    max_depth: [3, 4, 5]
-    learning_rate: [0.05, 0.1, 0.2]
-    subsample: [0.8, 1.0]
-    colsample_bytree: [0.8, 1.0]
-    reg_lambda: [1.0, 2.0]
+# XGBoost: espacio de búsqueda para tune_xgb.py
+tune_xgb:
+  n_estimators: [100, 200, 300]
+  max_depth: [3, 4, 5]
+  learning_rate: [0.05, 0.1, 0.2]
+  subsample: [0.8, 1.0]
+  colsample_bytree: [0.8, 1.0]
+  reg_lambda: [0.0, 1.0, 2.0]
+  cv: 3
+  scoring: f1
+  n_jobs: -1
+  random_state: 42
+  tree_method: hist
+  eval_metric: logloss
+
+# XGBoost: hiperparámetros base para train_xgb.py
+train_xgb:
+  random_state: 42
   tree_method: hist
   n_jobs: -1
   eval_metric: logloss
-  random_state: 42
+  seed: 42
 
-# Búsqueda de umbral para threshold.py
+# Búsqueda del mejor umbral para la LogReg y RF (threshold.py)
 threshold:
   metric: f1
-  grid_size: 101   # 0.00..1.00 con paso 0.01
+  maximize: true
+  grid:
+    start: 0.2
+    end: 0.8
+    num: 31
 
-# Etiquetas del reporte comparativo (src/report_benchmark.py)
+# Búsqueda del mejor umbral para XGBoost (threshold_xgb.py)
+threshold_xgb:
+  metric: f1
+  maximize: true
+  grid:
+    start: 0.2
+    end: 0.8
+    num: 31
+
+# Nombres que se usan en el reporte de benchmark
 report:
   labels:
-    logreg: "Logistic Regression"
-    rf: "RandomForest"
-    xgb: "XGBoost"
-    fe: "LR + FE"
+    - "LogReg baseline"
+    - "RandomForest"
+    - "XGBoost"
+    - "LogReg + FE"

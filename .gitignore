@@ -28,3 +28,5 @@ ECHO est  activado.
 /metrics_test_rf.json
 /metrics_fe.json
 /metrics_test_fe.json
+/metrics_tune_xgb.json
+/metrics_xgb.json
