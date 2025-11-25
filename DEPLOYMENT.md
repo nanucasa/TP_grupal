@@ -230,18 +230,22 @@ Los valores exactos dependen del proveedor cloud, región y volumen de tráfico 
 	online (API REST),
 	batch (scoring periódico),
 	o combinación de ambos.
+
 2- Crear un Dockerfile que incluya:
 	código del proyecto,
 	entorno (requirements.txt),
 	lógica para cargar el champion desde MLflow / champion_run.json.
+
 3- Integrar el build y deploy en GitHub Actions:
 	job de test + dvc repro para validar el pipeline,
 	build de imagen,
 	deploy automatizado a un entorno de staging.
+
 4- Configurar monitoreo:
 	reportes de drift (Evidently / similar),
 	dashboards de métricas técnicas (latencia, errores),
 	alertas por caída de test_f1 o aumento de errores.
+
 5- Documentar un runbook operacional:
 	qué hacer si la API deja de responder,
 	qué hacer si las métricas bajan,
