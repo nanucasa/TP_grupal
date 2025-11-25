@@ -59,7 +59,7 @@ def predict(customer_data: dict):
         "champion_run_id": champion["run_id"],
         "champion_experiment": champion["experiment_name"],
     }
-
+```
 ---------------------------------
 
 Stack sugerido:
