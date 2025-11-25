@@ -436,7 +436,6 @@ El pipeline genera:
 
 -----------------------------------
 
-
 🚀 Deployment
 
 La estrategia de deployment propuesta (API REST, batch, monitoreo y reentrenamiento) se documenta en:
@@ -447,8 +446,8 @@ DEPLOYMENT.md
 
 👤 Autoras
 
-Nadia Soledad Casá
-Karla Silva
+1- Nadia Soledad Casá
+2- Karla Silva
 
 Curso: Laboratorio de Minería de Datos – ISTEA
 Año: 2025
