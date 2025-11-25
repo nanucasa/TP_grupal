@@ -447,6 +447,7 @@ DEPLOYMENT.md
 👤 Autoras
 
 1- Nadia Soledad Casá
+
 2- Karla Silva
 
 Curso: Laboratorio de Minería de Datos – ISTEA
