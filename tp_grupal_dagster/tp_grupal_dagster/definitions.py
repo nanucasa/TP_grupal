@@ -1,7 +1,6 @@
-from dagster import Definitions, load_assets_from_modules
+from dagster import Definitions
+from .assets import test_metrics, f1_barchart, pr_curve_fe, roc_curve_fe, champion_run
 
-from . import assets
-
-all_assets = load_assets_from_modules([assets])
-
-defs = Definitions(assets=all_assets)
+defs = Definitions(
+    assets=[test_metrics, f1_barchart, pr_curve_fe, roc_curve_fe, champion_run]
+)

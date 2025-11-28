@@ -1,12 +1,17 @@
 # src/train.py
-# Entrena Logistic Regression con mejores hiperparámetros, loguea y registra en MLflow local con signature + input_example
+# Entrena Logistic Regression, guarda artefactos y registra en MLflow
+
 import argparse, os, json
-import numpy as np, pandas as pd
+import numpy as np
+import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-import joblib, mlflow, mlflow.sklearn, yaml
+import joblib
+import mlflow
+import mlflow.sklearn
+import yaml
 from mlflow.tracking import MlflowClient
 from mlflow.models import infer_signature
 
@@ -22,8 +27,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--train", required=True)
     ap.add_argument("--valid", required=True)
-    ap.add_argument("--out-model", required=True)   # models\model.joblib
-    ap.add_argument("--metrics", required=True)     # metrics.json
+    ap.add_argument("--out-model", required=True)   # models\model_*.joblib
+    ap.add_argument("--metrics", required=True)     # reports\metrics_*.json
     ap.add_argument(
         "--best-params",
         required=False,
@@ -31,26 +36,43 @@ def main():
         help="Ruta opcional a JSON con best_params; si no se pasa, se usan solo params.yaml",
     )
     ap.add_argument("--params", required=True)      # params.yaml
+    ap.add_argument(
+        "--run-name",
+        required=False,
+        default=None,
+        help="Nombre legible del run en MLflow (ej: nanu_run_001).",
+    )
     args = ap.parse_args()
 
-    # Hiperparámetros base (params.yaml)
+    # ------------------------------------------------------------------
+    # Hiperparámetros base desde params.yaml
+    # ------------------------------------------------------------------
     with open(args.params, "r", encoding="utf-8") as f:
         P = yaml.safe_load(f)
+
     C = float(P["train"]["C"])
     max_iter = int(P["train"]["max_iter"])
     seed = int(P["train"]["seed"])
 
-    # Override con best_params.json SOLO si se pasó y existe
+    # ------------------------------------------------------------------
+    # Override con best_params.json SOLO si se pasa y existe
+    # ------------------------------------------------------------------
     if args.best_params is not None and os.path.exists(args.best_params):
         try:
             with open(args.best_params, "r", encoding="utf-8") as f:
                 B = json.load(f)
-            C = float(B.get("C", C))
-            max_iter = int(B.get("max_iter", max_iter))
+
+            if "C" in B:
+                C = float(B["C"])
+            if "max_iter" in B:
+                max_iter = int(B["max_iter"])
         except Exception:
-            # Si hay cualquier problema leyendo best_params, seguimos con los valores de params.yaml
+            # Si algo falla leyendo best_params, seguimos con params.yaml
             pass
 
+    # ------------------------------------------------------------------
+    # Carga de datos
+    # ------------------------------------------------------------------
     Xtr_df, ytr, _ = load_xy(args.train)
     Xva_df, yva, _ = load_xy(args.valid)
 
@@ -66,18 +88,38 @@ def main():
         )),
     ])
 
-    # MLflow local (o el que definas por MLFLOW_TRACKING_URI)
-    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5001"))
-    mlflow.set_experiment("telco_churn_baseline")
+    # ------------------------------------------------------------------
+    # Configuración de MLflow
+    # ------------------------------------------------------------------
+    mlflow.set_tracking_uri(
+        os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5001")
+    )
+    exp_name = os.environ.get("MLFLOW_EXPERIMENT_NAME", "telco_churn_tune_xgb")
+    mlflow.set_experiment(exp_name)
 
-    # Input example + signature (usa columnas tal cual del train)
+    autor = "Nadia"
+
+    # Forzar usuario también vía variables de entorno
+    for var in ("LOGNAME", "USER", "USERNAME"):
+        os.environ[var] = autor
+
     input_example = Xtr_df.head(5)
-    with mlflow.start_run() as run:
+    run_name = args.run_name or "manual_run"
+
+    # ------------------------------------------------------------------
+    # Run de MLflow
+    # ------------------------------------------------------------------
+    with mlflow.start_run(run_name=run_name) as run:
+        # Forzar usuario/autor en tags y params
+        mlflow.set_tag("mlflow.user", autor)   # User
+        mlflow.set_tag("autor", autor)         # tag autor
+        mlflow.log_param("autor", autor)       # param autor
+        mlflow.log_param("run_name", run_name)
+
         pipe.fit(Xtr_df.to_numpy(dtype=float), ytr)
         prob = pipe.predict_proba(Xva_df.to_numpy(dtype=float))[:, 1]
         yhat = (prob >= 0.5).astype(int)
 
-        # Métricas en validación
         valid_metrics = {
             "accuracy": float(accuracy_score(yva, yhat)),
             "precision": float(precision_score(yva, yhat, zero_division=0)),
@@ -85,31 +127,38 @@ def main():
             "f1": float(f1_score(yva, yhat, zero_division=0)),
         }
 
-        # Guardar artefactos locales (mantenemos el esquema anterior de metrics.json)
+        # ------------------------------------------------------------------
+        # Guardar artefactos locales
+        # ------------------------------------------------------------------
         os.makedirs(os.path.dirname(args.out_model), exist_ok=True)
         joblib.dump(pipe, args.out_model)
-        json.dump(
-            {"valid": valid_metrics, "params": {"C": C, "max_iter": max_iter, "seed": seed}},
-            open(args.metrics, "w", encoding="utf-8"),
-            ensure_ascii=False,
-            indent=2,
-        )
 
-        # Log en MLflow: métricas simples + alias con prefijos valid_ y test_
+        os.makedirs(os.path.dirname(args.metrics), exist_ok=True)
+        with open(args.metrics, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "valid": valid_metrics,
+                    "params": {"C": C, "max_iter": max_iter, "seed": seed},
+                },
+                f,
+                ensure_ascii=False,
+                indent=2,
+            )
+
+        # ------------------------------------------------------------------
+        # Log de parámetros y métricas en MLflow
+        # ------------------------------------------------------------------
         mlflow.log_params({"C": C, "max_iter": max_iter, "seed": seed})
         mlflow.log_metrics(
             {
-                # nombres originales
                 "accuracy": valid_metrics["accuracy"],
                 "precision": valid_metrics["precision"],
                 "recall": valid_metrics["recall"],
                 "f1": valid_metrics["f1"],
-                # alias "valid_*"
                 "valid_accuracy": valid_metrics["accuracy"],
                 "valid_precision": valid_metrics["precision"],
                 "valid_recall": valid_metrics["recall"],
                 "valid_f1": valid_metrics["f1"],
-                # alias "test_*" (sin conjunto test separado; igual a valid)
                 "test_accuracy": valid_metrics["accuracy"],
                 "test_precision": valid_metrics["precision"],
                 "test_recall": valid_metrics["recall"],
@@ -141,10 +190,11 @@ def main():
         )
 
         print(
-            f"[OK] valid: acc={valid_metrics['accuracy']:.4f} "
+            f"[OK {run_name}] valid: acc={valid_metrics['accuracy']:.4f} "
             f"prec={valid_metrics['precision']:.4f} "
             f"rec={valid_metrics['recall']:.4f} "
-            f"f1={valid_metrics['f1']:.4f}"
+            f"f1={valid_metrics['f1']:.4f} "
+            f"(C={C}, max_iter={max_iter}, seed={seed})"
         )
 
 
