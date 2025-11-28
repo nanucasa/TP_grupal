@@ -2,12 +2,14 @@ from pathlib import Path
 
 import os
 import json
+import time
 
 import matplotlib.pyplot as plt
 import mlflow
 import pandas as pd
 from dagster import MetadataValue, asset
 from mlflow.tracking import MlflowClient
+from mlflow.entities import ViewType
 
 # Ruta base del proyecto y carpeta de reportes
 BASE_DIR = Path(r"C:\dvc_prueba")
@@ -26,6 +28,18 @@ EXPERIMENT_NAMES = [
 # Métricas fijas de las curvas del modelo FE (las que se ven en los títulos de los plots)
 PR_AP_FE = 0.598
 ROC_AUC_FE = 0.742
+
+# Experimento de tuning donde están los nanu_run_xxx
+TUNE_EXPERIMENT_NAME = "telco_churn_tune_xgb"
+
+# Métrica primaria para seleccionar champion
+PRIMARY_METRIC = "test_f1"
+
+# Nombre del modelo en el Model Registry
+MODEL_NAME = "TelcoChurn_LogReg"
+
+# Prefijo de los runs de Nadia
+NANU_PREFIX = "nanu_run_"
 
 
 @asset(
@@ -56,53 +70,40 @@ def test_metrics(context) -> pd.DataFrame:
             )
             continue
 
+        # Buscamos los runs ordenados por f1_test descendente
         try:
             runs = client.search_runs(
-                experiment_ids=[exp.experiment_id],
-                filter_string="metrics.f1_test IS NOT NULL",
-                order_by=["metrics.f1_test DESC"],
+                [exp.experiment_id],
+                order_by=["metrics.test_f1 DESC"],
                 max_results=1,
             )
         except Exception as exc:
             context.log.warning(
-                f"Error buscando runs del experimento '{exp_name}': {exc}"
+                f"Error al buscar runs del experimento '{exp_name}': {exc}"
             )
             continue
 
         if not runs:
             context.log.warning(
-                f"El experimento '{exp_name}' no tiene runs con métrica 'f1_test'."
+                f"El experimento '{exp_name}' no tiene runs con métricas."
             )
             continue
 
         best_run = runs[0]
         metrics = best_run.data.metrics
-        tags = best_run.data.tags
+        params = best_run.data.params
 
-        # Nombre de modelo: usamos tag si existe, sino el nombre del experimento
-        model_name = tags.get("model_name", exp.name)
-
-        def _get_metric(name: str):
-            """Devuelve la métrica como float si existe, sino None."""
-            if name not in metrics:
-                return None
-            try:
-                return float(metrics[name])
-            except (TypeError, ValueError):
-                return None
-
-        rows.append(
-            {
-                "experiment_name": exp.name,
-                "run_id": best_run.info.run_id,
-                "model_name": model_name,
-                "f1_test": _get_metric("f1_test"),
-                "precision_test": _get_metric("precision_test"),
-                "recall_test": _get_metric("recall_test"),
-                "roc_auc_test": _get_metric("roc_auc_test"),
-                "pr_auc_test": _get_metric("pr_auc_test"),
-            }
-        )
+        row = {
+            "experiment_name": exp_name,
+            "run_id": best_run.info.run_id,
+            "model_name": params.get("model_name", exp_name),
+            "f1_test": metrics.get("test_f1"),
+            "precision_test": metrics.get("test_precision"),
+            "recall_test": metrics.get("test_recall"),
+            "roc_auc_test": metrics.get("test_roc_auc"),
+            "pr_auc_test": metrics.get("test_pr_auc"),
+        }
+        rows.append(row)
 
     if not rows:
         context.log.warning(
@@ -161,33 +162,22 @@ def f1_barchart(context, test_metrics: pd.DataFrame) -> str:
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.bar(test_metrics["model_name"], test_metrics["f1_test"])
     ax.set_xlabel("Modelo")
-    ax.set_ylabel("F1 score")
-    ax.set_title("Comparación F1 en test")
+    ax.set_ylabel("F1 en test")
+    ax.set_title("Comparación de F1 en test (MLflow remoto)")
+    plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
 
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    image_path = REPORTS_DIR / "f1_bench_dagster.png"
+    image_path = REPORTS_DIR / "f1_comparison.png"
     fig.savefig(image_path)
     plt.close(fig)
 
-    # Metadata: path de la imagen + un valor numérico por modelo
-    meta = {
-        "image_path": MetadataValue.path(str(image_path)),
-    }
-
-    for _, row in test_metrics.iterrows():
-        model_name = str(row["model_name"])
-        f1_value = row.get("f1_test")
-        try:
-            f1_float = float(f1_value)
-        except (TypeError, ValueError):
-            continue
-
-        # Esto genera una serie por modelo en la pestaña "Plots"
-        key = f"f1_test_{model_name}"
-        meta[key] = MetadataValue.float(f1_float)
-
-    context.add_output_metadata(meta)
+    # Metadata: el path del archivo y un preview
+    context.add_output_metadata(
+        {
+            "image_path": MetadataValue.path(str(image_path)),
+        }
+    )
 
     # Devolvemos la ruta de la imagen como valor del asset
     return str(image_path)
@@ -226,7 +216,7 @@ def pr_curve_fe(context, test_metrics: pd.DataFrame) -> str:
     context.add_output_metadata(
         {
             "image_path": MetadataValue.path(str(image_path)),
-            "average_precision_fe": MetadataValue.float(pr_auc_value),
+            "pr_ap_fe": MetadataValue.float(pr_auc_value),
         }
     )
 
@@ -273,24 +263,119 @@ def roc_curve_fe(context, test_metrics: pd.DataFrame) -> str:
     return str(image_path)
 
 
-@asset
-def champion_run():
-    """
-    Lee artifacts/champion_run.json (generado por scripts/update_champion_from_runs.py
-    en C:\dvc_prueba) y lo expone como asset en Dagster.
-    """
-    # assets.py está en:
-    # C:\dvc_prueba\tp_grupal_dagster\tp_grupal_dagster\assets.py
-    # repo_root = C:\dvc_prueba
-    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    path = os.path.join(repo_root, "artifacts", "champion_run.json")
+@asset(
+    description=(
+        "Selecciona el mejor run nanu_run_xxx del experimento telco_churn_tune_xgb "
+        "según la métrica test_f1, actualiza artifacts/champion_run.json y el alias "
+        "'champion' en el modelo TelcoChurn_LogReg."
+    ),
+)
+def champion_run(context) -> dict:
+    """Asset Dagster para elegir y registrar el champion."""
+    # Apuntamos a MLflow remoto
+    mlflow.set_tracking_uri(REMOTE_TRACKING_URI)
+    client = MlflowClient()
 
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    exp = client.get_experiment_by_name(TUNE_EXPERIMENT_NAME)
+    if exp is None:
+        raise RuntimeError(
+            f"No se encontró el experimento {TUNE_EXPERIMENT_NAME!r} en MLflow remoto."
+        )
 
-    return data
+    # Buscamos hasta 1000 runs activos
+    runs = client.search_runs(
+        [exp.experiment_id],
+        run_view_type=ViewType.ACTIVE_ONLY,
+        max_results=1000,
+    )
 
+    candidatos = []
+    for r in runs:
+        tags = r.data.tags
+        run_name = tags.get("mlflow.runName", r.info.run_id)
 
+        # Nos quedamos solo con los nanu_run_xxx
+        if not run_name.startswith(NANU_PREFIX):
+            continue
 
+        metrics = r.data.metrics
+        if PRIMARY_METRIC not in metrics:
+            continue
+
+        try:
+            metric_value = float(metrics[PRIMARY_METRIC])
+        except (TypeError, ValueError):
+            continue
+
+        candidatos.append((metric_value, r, run_name))
+
+    if not candidatos:
+        raise RuntimeError(
+            f"No se encontraron runs con nombre {NANU_PREFIX!r} y métrica "
+            f"{PRIMARY_METRIC!r} en el experimento {TUNE_EXPERIMENT_NAME!r}."
+        )
+
+    # Ordenamos por métrica descendente y tomamos el mejor
+    candidatos.sort(key=lambda t: t[0], reverse=True)
+    best_value, best_run, best_name = candidatos[0]
+
+    champion_info = {
+        "experiment_name": exp.name,
+        "experiment_id": exp.experiment_id,
+        "primary_metric": PRIMARY_METRIC,
+        "run_id": best_run.info.run_id,
+        "run_name": best_name,
+        "metric_value": best_value,
+    }
+
+    # Guardamos artifacts/champion_run.json
+    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+    champ_path = ARTIFACTS_DIR / "champion_run.json"
+    with champ_path.open("w", encoding="utf-8") as f:
+        json.dump(champion_info, f, ensure_ascii=False, indent=2)
+
+    # Buscamos versión del modelo para este run
+    version_for_run = None
+    versions = client.search_model_versions(f"name='{MODEL_NAME}'")
+    for mv in versions:
+        if mv.run_id == best_run.info.run_id:
+            version_for_run = int(mv.version)
+            break
+
+    aliases_payload = None
+    if version_for_run is not None:
+        # Aplicamos alias 'champion'
+        client.set_registered_model_alias(MODEL_NAME, "champion", version_for_run)
+        aliases_payload = {
+            "applied": True,
+            "alias": "champion",
+            "name": MODEL_NAME,
+            "version": version_for_run,
+            "tracking_uri": REMOTE_TRACKING_URI,
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()) + "Z",
+        }
+        alias_path = ARTIFACTS_DIR / "aliases_applied.json"
+        with alias_path.open("w", encoding="utf-8") as f:
+            json.dump(aliases_payload, f, ensure_ascii=False, indent=2)
+    else:
+        context.log.warning(
+            f"No se encontró ninguna versión en {MODEL_NAME!r} con run_id "
+            f"{best_run.info.run_id}; solo se actualizó champion_run.json.",
+        )
+
+    # Metadata para inspeccionar en Dagster
+    meta = {
+        "primary_metric": PRIMARY_METRIC,
+        "metric_value": MetadataValue.float(best_value),
+        "run_name": best_name,
+        "run_id": best_run.info.run_id,
+        "experiment_name": exp.name,
+        "champion_json": MetadataValue.path(str(champ_path)),
+    }
+    if version_for_run is not None:
+        meta["model_version"] = MetadataValue.int(version_for_run)
+
+    context.add_output_metadata(meta)
+    return champion_info
 
 
