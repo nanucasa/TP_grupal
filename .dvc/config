@@ -1,5 +1,5 @@
 [core]
-    remote = origin
+    remote = dagshub
 ['remote "gdrive-remote"']
     url = gdrive://0ACqI9UMjZzPKUk9PVA
     gdrive_use_service_account = true
@@ -9,4 +9,4 @@
 ['remote "dagshub"']
     url = https://dagshub.com/nanucasa/TP_grupal.dvc
 ['remote "origin"']
-    url = https://dagshub.com/karlasv69/TP_grupal.dvc
+    url = https://dagshub.com/nanucasa/TP_grupal.dvc
