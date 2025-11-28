@@ -24,23 +24,31 @@ def main():
     ap.add_argument("--valid", required=True)
     ap.add_argument("--out-model", required=True)   # models\model.joblib
     ap.add_argument("--metrics", required=True)     # metrics.json
-    ap.add_argument("--best-params", required=True) # artifacts\best_params.json
+    ap.add_argument(
+        "--best-params",
+        required=False,
+        default=None,                               # artifacts\best_params.json (opcional)
+        help="Ruta opcional a JSON con best_params; si no se pasa, se usan solo params.yaml",
+    )
     ap.add_argument("--params", required=True)      # params.yaml
     args = ap.parse_args()
 
-    # Hiperparámetros base (params.yaml) + override por best_params.json
+    # Hiperparámetros base (params.yaml)
     with open(args.params, "r", encoding="utf-8") as f:
         P = yaml.safe_load(f)
     C = float(P["train"]["C"])
     max_iter = int(P["train"]["max_iter"])
     seed = int(P["train"]["seed"])
 
-    if os.path.exists(args.best_params):
+    # Override con best_params.json SOLO si se pasó y existe
+    if args.best_params is not None and os.path.exists(args.best_params):
         try:
-            B = json.load(open(args.best_params, "r", encoding="utf-8"))
+            with open(args.best_params, "r", encoding="utf-8") as f:
+                B = json.load(f)
             C = float(B.get("C", C))
             max_iter = int(B.get("max_iter", max_iter))
         except Exception:
+            # Si hay cualquier problema leyendo best_params, seguimos con los valores de params.yaml
             pass
 
     Xtr_df, ytr, _ = load_xy(args.train)
@@ -58,7 +66,7 @@ def main():
         )),
     ])
 
-    # MLflow local
+    # MLflow local (o el que definas por MLFLOW_TRACKING_URI)
     mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5001"))
     mlflow.set_experiment("telco_churn_baseline")
 

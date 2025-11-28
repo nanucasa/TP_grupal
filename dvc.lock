@@ -21,12 +21,8 @@ stages:
   train:
     cmd: python src\train.py --train data\processed\train.csv --valid 
       data\processed\valid.csv --out-model models\model.joblib --metrics 
-      metrics.json --best-params artifacts\best_params.json --params params.yaml
+      metrics.json --params params.yaml
     deps:
-    - path: artifacts/best_params.json
-      hash: md5
-      md5: d20390841c946883c84aef457b51248d
-      size: 37
     - path: data/processed/train.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
@@ -35,10 +31,14 @@ stages:
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
+    - path: params.yaml
+      hash: md5
+      md5: 73a629cf0557f0ffa813496358bba4db
+      size: 1996
     - path: src/train.py
       hash: md5
-      md5: e03981025861372075c8d4a1cdfb8119
-      size: 5472
+      md5: 5aefb62d3ea7c24b34135525c29364a4
+      size: 5897
     params:
       params.yaml:
         train.C: 10.0
@@ -47,11 +47,11 @@ stages:
     outs:
     - path: metrics.json
       hash: md5
-      md5: e304825870467993bc163fdd4a5a4c2b
-      size: 223
+      md5: 01215ad27de48e363ac6d0c2332e378b
+      size: 224
     - path: models/model.joblib
       hash: md5
-      md5: 704ee90e14fdb50cd5f13eab69e8fcf7
+      md5: 76c503b9e0807f761fef07c228889995
       size: 1921
   evaluate_test:
     cmd: python src\evaluate.py --test data\processed\test.csv --model 
