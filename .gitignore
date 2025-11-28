@@ -1,43 +1,33 @@
-mlruns/
-mlflow.dbmlruns/
-mlflow*.db
-__pycache__/
-*.pyc
+# MLflow local
 mlruns/
 mlflow*.db
+
+# Cach√©s de Python
 __pycache__/
 *.pyc
+
+# Predicciones de ejemplo (no versionar)
 predictions/preds_sample_serving.json
 
-ECHO est† activado.
+# Reportes generados autom√°ticamente
 reports/*
 !reports/
 !reports/benchmark.md
 !reports/f1_bench.png
 
-ECHO est† activado.
-!reports/
-!reports/benchmark.md
-!reports/f1_bench.png
-.dvc/config.bak
-/metrics_tune.json
-/metrics.json
-/metrics_test.json
-/metrics_tune_rf.json
-/metrics_rf.json
-/metrics_test_rf.json
-/metrics_fe.json
-/metrics_test_fe.json
-/metrics_tune_xgb.json
-/metrics_xgb.json
-
-
 # Dagster runtime
 tp_grupal_dagster/.tmp_dagster_home_*/
 
-# Metadata de instalaciÛn editable de Python
+# Metadata de instalaci√≥n editable de Python
 tp_grupal_dagster/*.egg-info/
+
+# M√©tricas temporales
 /metrics_test_xgb.json
 /metrics_threshold.json
 /metrics_threshold_xgb.json
+
+# Artifacts derivados
 artifacts/champion_run.json 
+
+# Modelos locales, no versionar
+models/*.joblib
