@@ -21,10 +21,18 @@ tp_grupal_dagster/.tmp_dagster_home_*/
 # Metadata de instalación editable de Python
 tp_grupal_dagster/*.egg-info/
 
-# Métricas temporales
-/metrics_test_xgb.json
-/metrics_threshold.json
-/metrics_threshold_xgb.json
+# Métricas exportadas/temporales (no versionar)
+metrics*.json
+/metrics.json
+/metrics_fe.json
+/metrics_rf.json
+/metrics_test.json
+/metrics_test_fe.json
+/metrics_test_rf.json
+/metrics_tune.json
+/metrics_tune_rf.json
+/metrics_tune_xgb.json
+/metrics_xgb.json
 
 # Artifacts derivados
 artifacts/champion_run.json 
