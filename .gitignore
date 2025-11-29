@@ -39,3 +39,8 @@ artifacts/champion_run.json
 
 # Modelos locales, no versionar
 models/*.joblib
+
+dagster_home/
+artifacts/
+tp_grupal_dagster/artifacts/
+mlruns/
