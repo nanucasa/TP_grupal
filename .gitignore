@@ -44,7 +44,7 @@ models/*.joblib
 tp_grupal_dagster/artifacts/*
 dagster_home/
 mlruns/
-
+git/
 
 # Permitir archivos .dvc dentro de artifacts/
 !tp_grupal_dagster/artifacts/*.dvc
