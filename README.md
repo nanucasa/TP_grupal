@@ -7,10 +7,10 @@ Proyecto ISTEA | Materia: Laboratorio de Minería de Datos
 
 - Pipeline reproducible de Machine Learning para predecir la rotación de clientes (churn) en una empresa de telefonía, aplicando buenas prácticas de MLOps con versionado de datos, tracking de experimentos y orquestación automatizada de assets.
 
-- Contexto:
+**Contexto:**
 El objetivo es identificar qué clientes tienen mayor probabilidad de darse de baja, utilizando información de facturación, tipo de contrato y otros datos relacionados con el servicio.
 
-- El proyecto integra:
+**El proyecto integra:**
 1- Código versionado con Git/GitHub.
 2- Datos y pipeline versionados con DVC.
 3- Experimentos y modelos registrados en MLflow (remoto en DagsHub).
@@ -123,7 +123,7 @@ Desde allí se visualizan los assets, el sensor champion_sensor y el modelo camp
 - └── README.md
 
 ## 🔄 Pipeline de Trabajo (DVC)
-** Stage 1 – data_prep **
+**Stage 1 – data_prep**
 
 Script: src/data_prep.py
 
@@ -143,7 +143,7 @@ Este stage se ejecuta automáticamente cuando se corre:
 dvc repro train
 y detecta si cambió el CSV o params.yaml.
 
-** Stage 2 – train **
+**Stage 2 – train**
 
 Script: src/train.py
 
@@ -163,7 +163,7 @@ metrics.json
 
 ## 📚 Guía rápida paso a paso (resumen)
 
-1- Preparar entorno
+**Preparar entorno**
 - Git clone del repositorio.
 - Crear y activar entorno conda tp_grupal.
 - Instalar requirements.txt.
@@ -173,7 +173,7 @@ metrics.json
 - Ejecutar el pipeline completo
 - Ejecutar dvc repro train.
 
-2- Verificar que se generen:
+**Verificar que se generen:**
 - data/processed/train.csv y valid.csv
 - models/model.joblib
 - metrics.json y gráficos en reports/
@@ -183,17 +183,17 @@ metrics.json
 - Ver los runs con sus métricas (F1, accuracy, etc.) y modelos registrados.
 - Monitoreo y automatización con Dagster
 
-3- Desde la raíz del proyecto de orquestación:
+**Desde la raíz del proyecto de orquestación:**
 - cd tp_grupal_dagster
 - dagster dev
 
-4- Abrir http://127.0.0.1:3000
+**Abrir http://127.0.0.1:3000**
 
-5- Revisar:
+**Revisar:**
 - Assets de champion.
 - Sensor champion_sensor (detecta nuevo campeón).
 
-6- Confirmar modelo campeón:
+**Confirmar modelo campeón:**
 - Revisar artifacts/champion_metadata.json (actualizado por Dagster).
 - Verificar que en MLflow Model Registry el modelo tenga alias champion.
 
@@ -202,7 +202,7 @@ metrics.json
 Dagster monitorea automáticamente el experimento telco_churn_tune_xgb en MLflow y selecciona el mejor run según la métrica F1.
 Cuando detecta un nuevo campeón:
 
-- Materializa los assets:
+**Materializa los assets:**
 select_champion_from_mlflow
 persist_champion_json
 set_mlflow_champion_alias
@@ -210,15 +210,15 @@ Actualiza el archivo local artifacts/champion_metadata.json con la información 
 Asigna el alias champion al modelo correspondiente en el Model Registry de MLflow.
 El sensor champion_sensor solo se dispara si existe un nuevo run con F1 superior al actual, evitando ejecuciones en bucle innecesarias.
 
-- Ejemplo de ejecución:
+**Ejemplo de ejecución:**
 Desde la raíz del proyecto de orquestación:
 cd tp_grupal_dagster
 dagster dev
 
-- Abrir en el navegador:
+**Abrir en el navegador:**
 http://127.0.0.1:3000
 
-- En la UI de Dagster se puede:
+**En la UI de Dagster se puede:**
 Ver los assets relacionados al modelo campeón.
 Ver el historial de corridas disparadas por el sensor.
 Ver qué run de MLflow está actualmente marcado como campeón.
@@ -228,49 +228,50 @@ Ver qué run de MLflow está actualmente marcado como campeón.
 El mejor modelo actual proviene del experimento telco_churn_tune_xgb.
 Dagster detectó automáticamente el siguiente champion registrado en artifacts/champion_metadata.json:
 
-Atributo			Valor
-Experimento			telco_churn_tune_xgb
-Modelo				TelcoChurn_XGB
-Run ID				3049f68f87bc47b7a9327728b86c22f0
-Métrica principal	F1
-Valor F1			0.80
+- Atributo		    	Valor
+- Experimento			telco_churn_tune_xgb
+- Modelo				TelcoChurn_XGB
+- Run ID	    		3049f68f87bc47b7a9327728b86c22f0
+- Métrica principal	    F1
+- Valor F1			    0.80
 
 Este modelo es el que queda marcado con el alias champion en el Model Registry de MLflow.
 
 ## 📈 Reproducibilidad y CI/CD
 
-- Comandos útiles DVC:
+**Comandos útiles DVC:**
 dvc repro train
 dvc dag
 dvc status
 dvc params diff
 
-- Automatización GitHub Actions:
+**Automatización GitHub Actions:**
 Instala dependencias.
 Ejecuta dvc pull y dvc repro.
 Conecta con DagsHub usando secrets del repositorio.
 
 ## 🧩 Visualizaciones
 
-El flujo genera:
-Curvas ROC y PR en la carpeta reports/.
-Tabla de métricas consolidada desde MLflow en la UI de DagsHub.
-Imagen comparativa de F1 por modelo (reports/f1_bench_dagster.png).
-Asset de champion actualizado (artifacts/champion_metadata.json).
+**El flujo genera:**
+- Curvas ROC y PR en la carpeta reports/.
+- Tabla de métricas consolidada desde MLflow en la UI de DagsHub.
+- Imagen comparativa de F1 por modelo (reports/f1_bench_dagster.png).
+- Asset de champion actualizado (artifacts/champion_metadata.json).
 
 ## 📌 Resultados Finales
 
-Modelo en “producción” (Champion actual):
-Algoritmo: TelcoChurn_XGB
-Experimento: telco_churn_tune_xgb
-F1-score: 0.80
-Registrado automáticamente en MLflow como alias champion.
-El sistema Dagster + MLflow permite mantener actualizado este modelo sin intervención manual, garantizando trazabilidad total del pipeline.
+**Modelo en “producción” (Champion actual):**
+- Algoritmo: TelcoChurn_XGB
+- Experimento: telco_churn_tune_xgb
+- F1-score: 0.80
+- Registrado automáticamente en MLflow como alias champion.
+- El sistema Dagster + MLflow permite mantener actualizado este modelo sin intervención manual, garantizando trazabilidad total del pipeline.
 
 ## 🚀 Deployment
 
 La estrategia de deployment propuesta (API REST, batch, monitoreo y reentrenamiento) se documenta en:
-DEPLOYMENT.md
+
+**DEPLOYMENT.md**
 
 ## 👤 Autores
 
