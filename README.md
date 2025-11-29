@@ -251,12 +251,13 @@ dvc_prueba\tp_grupal_dagster\artifacts\champion_metadata.json
 - El mejor modelo actual proviene del experimento telco_churn_tune_xgb.
 - Dagster detectó automáticamente el siguiente champion registrado en artifacts/champion_metadata.json:
 
-Atributo            Valor
-Experimento         telco_churn_tune_xgb
-Modelo              TelcoChurn_XGB
-Run ID              53e572e30c7a46a49764166eb55a7302
-Métrica principal   F1
-Valor F1            ≈ 0.603 (0.6028037383…)
+| Atributo          | Valor                                      |
+|-------------------|--------------------------------------------|
+| Experimento       | `telco_churn_tune_xgb`                     |
+| Modelo            | `TelcoChurn_XGB`                           |
+| Run ID            | `53e572e30c7a46a49764166eb55a7302`         |
+| Métrica principal | `F1`                                       |
+| Valor F1          | ≈ **0.603** (`0.6028037383…`)              |
 
 -Este modelo es el que queda marcado con el alias champion en el Model Registry de MLflow.
 
