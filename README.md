@@ -84,13 +84,21 @@ El objetivo es identificar qué clientes tienen mayor probabilidad de darse de b
 
 Esto:
 1- Toma data/raw/telco_churn.csv
+
 2- Genera data/processed/train.csv y data/processed/valid.csv
+
 3- Entrena el modelo y guarda models/model.joblib
+
 4- Genera metrics.json y gráficos en reports/
+
 5- Loguea el experimento y el modelo en MLflow (local y remoto en DagsHub)
+
 6- Ver resultados en DagsHub / MLflow (tracking remoto)
+
 7- Ir al repo en DagsHub.
+
 8- Abrir la pestaña “Experiments” (MLflow).
+
 9- Seleccionar el experimento telco_churn_tune_xgb para ver runs, métricas y modelos registrados.
 
 9 bis- (Opcional pero recomendado) Levantar Dagster para monitoreo y automatización
@@ -103,25 +111,45 @@ Desde allí se visualizan los assets, el sensor champion_sensor y el modelo camp
 ## 📁 Estructura del Proyecto
 
 TP_grupal/
+
 ├── data/
+
 │ ├── raw/ # Datos originales (DVC)
+
 │ └── processed/ # Datos limpios (DVC)
+
 ├── src/
+
 │ ├── data_prep.py # Limpieza y split de datos
+
 │ └── train.py # Entrenamiento + MLflow logging
+
 ├── models/ # Modelos entrenados
+
 │ └── model.joblib
+
 ├── tp_grupal_dagster/
+
 │ └── tp_grupal_dagster/
+
 │ ├── assets.py # Assets Dagster
+
 │ ├── definitions.py # Definitions Dagster
+
 │ └── init.py
+
 ├── artifacts/
+
 │ └── champion_metadata.json # Información del modelo campeón
+
 ├── reports/ # Gráficos (ROC, PR)
+
 ├── params.yaml # Parámetros del modelo
+
 ├── dvc.yaml # Definición del pipeline
+
 ├── requirements.txt
+
 └── README.md
 
 ## 🔄 Pipeline de Trabajo (DVC)
