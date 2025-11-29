@@ -47,4 +47,4 @@ mlruns/
 git/
 
 # Permitir archivos .dvc dentro de artifacts/
-!tp_grupal_dagster/artifacts/*.dvc
+!tp_grupal_dagster/artifacts/*.dvc"git/" 
