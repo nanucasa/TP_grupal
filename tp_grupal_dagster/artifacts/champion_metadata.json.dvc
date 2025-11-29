@@ -1,0 +1,5 @@
+outs:
+- md5: 9c39d42235f3d9bbac5d70916b54bd13
+  size: 221
+  hash: md5
+  path: champion_metadata.json
