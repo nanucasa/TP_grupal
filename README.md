@@ -252,7 +252,6 @@ dvc_prueba\tp_grupal_dagster\artifacts\champion_metadata.json
 - Dagster detectó automáticamente el siguiente champion registrado en artifacts/champion_metadata.json:
 
 Atributo            Valor
-____________________________________________________
 Experimento         telco_churn_tune_xgb
 Modelo              TelcoChurn_XGB
 Run ID              53e572e30c7a46a49764166eb55a7302
