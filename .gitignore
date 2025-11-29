@@ -40,7 +40,11 @@ artifacts/champion_run.json
 # Modelos locales, no versionar
 models/*.joblib
 
-!tp_grupal_dagster/artifacts/*.dvc
-dagster_home/
+# Ignorar todo en artifacts/
 tp_grupal_dagster/artifacts/*
+dagster_home/
 mlruns/
+
+
+# Permitir archivos .dvc dentro de artifacts/
+!tp_grupal_dagster/artifacts/*.dvc
