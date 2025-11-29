@@ -1,0 +1,5 @@
+outs:
+- md5: 04f1798eeca1e2b0cf63139ded10de36
+  size: 224
+  hash: md5
+  path: champion_from_mlflow.json
