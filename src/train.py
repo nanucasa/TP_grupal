@@ -130,10 +130,15 @@ def main():
         # ------------------------------------------------------------------
         # Guardar artefactos locales
         # ------------------------------------------------------------------
+        # out-model siempre tiene carpeta (ej: models\model.joblib)
         os.makedirs(os.path.dirname(args.out_model), exist_ok=True)
         joblib.dump(pipe, args.out_model)
 
-        os.makedirs(os.path.dirname(args.metrics), exist_ok=True)
+        # metrics puede NO tener carpeta (ej: "metrics.json" en el cwd)
+        metrics_dir = os.path.dirname(args.metrics)
+        if metrics_dir:
+            os.makedirs(metrics_dir, exist_ok=True)
+
         with open(args.metrics, "w", encoding="utf-8") as f:
             json.dump(
                 {
@@ -200,3 +205,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
