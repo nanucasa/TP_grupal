@@ -1,10 +1,9 @@
-# scripts/run_nanu_runs.py
+# scripts/base_scripts_runs.py
 
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
 from xgboost import XGBClassifier
 
@@ -15,15 +14,30 @@ import mlflow.xgboost
 EXPERIMENT_NAME = "telco_churn_tune_xgb"
 MODEL_NAME = "TelcoChurn_XGB"
 METRIC_NAME = "f1"
+AUTHOR = "Nadia"
 
 
-def get_or_create_experiment(experiment_name: str) -> str:
+def get_tracking_uris() -> Tuple[str, str]:
     """
-    Devuelve el experiment_id del experimento. Si no existe, lo crea.
+    Devuelve (local_uri, remote_uri).
+
+    - local_uri: siempre 'file:mlruns' en la raíz del repo.
+    - remote_uri: se toma de la variable de entorno MLFLOW_TRACKING_URI (por ejemplo, DagsHub).
     """
-    exp = mlflow.get_experiment_by_name(experiment_name)
+    local_uri = "file:mlruns"
+    remote_uri = os.getenv("MLFLOW_TRACKING_URI")
+    return local_uri, remote_uri
+
+
+def get_or_create_experiment(tracking_uri: str) -> str:
+    """
+    Devuelve el experiment_id del experimento en un tracking_uri concreto.
+    Si no existe, lo crea.
+    """
+    mlflow.set_tracking_uri(tracking_uri)
+    exp = mlflow.get_experiment_by_name(EXPERIMENT_NAME)
     if exp is None:
-        experiment_id = mlflow.create_experiment(experiment_name)
+        experiment_id = mlflow.create_experiment(EXPERIMENT_NAME)
     else:
         experiment_id = exp.experiment_id
     return experiment_id
@@ -31,68 +45,79 @@ def get_or_create_experiment(experiment_name: str) -> str:
 
 def load_data():
     """
-    Carga el dataset de churn y lo separa en train / test.
+    Carga los datos de churn desde data/processed/{train,valid}.csv.
 
-    AJUSTÁ:
-    - La ruta del CSV si en tu repo es distinta.
-    - El nombre de la columna target si no se llama 'Churn'.
+    Usamos:
+    - train.csv para entrenar
+    - valid.csv para calcular el F1 que se loguea en MLflow
     """
-    df = pd.read_csv("data/processed/telco_churn_prepared.csv")
+    train_path = os.path.join("data", "processed", "train.csv")
+    valid_path = os.path.join("data", "processed", "valid.csv")
 
-    y = df["Churn"]          # <- cambia si tu target tiene otro nombre
-    X = df.drop(columns=["Churn"])
+    train_df = pd.read_csv(train_path)
+    valid_df = pd.read_csv(valid_path)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=0.2,
+    # IMPORTANTE: la columna target en tus datos se llama 'churn' en minúsculas
+    target_col = "churn"
+
+    y_train = train_df[target_col]
+    X_train = train_df.drop(columns=[target_col])
+
+    y_valid = valid_df[target_col]
+    X_valid = valid_df.drop(columns=[target_col])
+
+    return X_train, X_valid, y_train, y_valid
+
+
+def train_and_evaluate(params: Dict[str, Any]) -> Tuple[XGBClassifier, float]:
+    """
+    Entrena el modelo con los hiperparámetros dados y devuelve (modelo, f1).
+    """
+    X_train, X_valid, y_train, y_valid = load_data()
+
+    model = XGBClassifier(
+        n_estimators=params.get("n_estimators", 200),
+        max_depth=params.get("max_depth", 5),
+        learning_rate=params.get("learning_rate", 0.1),
+        subsample=params.get("subsample", 1.0),
+        colsample_bytree=params.get("colsample_bytree", 1.0),
+        reg_lambda=params.get("reg_lambda", 1.0),
+        reg_alpha=params.get("reg_alpha", 0.0),
         random_state=42,
-        stratify=y,
+        n_jobs=-1,
+        eval_metric="logloss",
+        use_label_encoder=False,
     )
-    return X_train, X_test, y_train, y_test
+
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_valid)
+    f1 = f1_score(y_valid, y_pred)
+
+    return model, f1
 
 
-def train_and_log_model(
+def log_single_run(
+    tracking_uri: str,
     run_name: str,
     params: Dict[str, Any],
-    author: str = "Nadia",
+    model: XGBClassifier,
+    f1: float,
 ) -> None:
     """
-    Entrena un XGBClassifier con 'params' y lo registra en MLflow,
-    incluido el Model Registry (MODEL_NAME).
+    Registra un run en UN servidor MLflow (tracking_uri).
     """
-    X_train, X_test, y_train, y_test = load_data()
+    if not tracking_uri:
+        return
 
-    with mlflow.start_run(run_name=run_name):
-        # Tag para filtrar por autora
-        mlflow.set_tag("author", author)
+    experiment_id = get_or_create_experiment(tracking_uri)
+    mlflow.set_tracking_uri(tracking_uri)
 
-        # Log de hiperparámetros
+    with mlflow.start_run(run_name=run_name, experiment_id=experiment_id):
+        mlflow.set_tag("author", AUTHOR)
         mlflow.log_params(params)
-
-        model = XGBClassifier(
-            n_estimators=params.get("n_estimators", 200),
-            max_depth=params.get("max_depth", 5),
-            learning_rate=params.get("learning_rate", 0.1),
-            subsample=params.get("subsample", 1.0),
-            colsample_bytree=params.get("colsample_bytree", 1.0),
-            reg_lambda=params.get("reg_lambda", 1.0),
-            reg_alpha=params.get("reg_alpha", 0.0),
-            random_state=42,
-            n_jobs=-1,
-            eval_metric="logloss",
-            use_label_encoder=False,
-        )
-
-        model.fit(X_train, y_train)
-
-        # Métrica principal (la que usa Dagster para el champion)
-        y_pred = model.predict(X_test)
-        f1 = f1_score(y_test, y_pred)
         mlflow.log_metric(METRIC_NAME, f1)
 
-        # REGISTRO DEL MODELO EN EL MODEL REGISTRY
-        # (esto crea/actualiza versiones de 'TelcoChurn_XGB' asociadas al run_id)
         mlflow.xgboost.log_model(
             model,
             artifact_path="model",
@@ -100,15 +125,41 @@ def train_and_log_model(
         )
 
 
-def main():
-    # Usa el tracking URI que tengas configurado (local o DagsHub)
-    tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
-    if tracking_uri:
-        mlflow.set_tracking_uri(tracking_uri)
+def train_and_log_model_mirrored(
+    run_name: str,
+    params: Dict[str, Any],
+) -> None:
+    """
+    Entrena UNA vez y refleja el run en:
+      - MLflow local (file:mlruns)
+      - MLflow remoto (MLFLOW_TRACKING_URI), si está definido.
+    """
+    local_uri, remote_uri = get_tracking_uris()
 
-    experiment_id = get_or_create_experiment(EXPERIMENT_NAME)
-    mlflow.set_experiment(experiment_id=experiment_id)
+    # Entrenamos una sola vez
+    model, f1 = train_and_evaluate(params)
 
+    # Log en local
+    log_single_run(
+        tracking_uri=local_uri,
+        run_name=run_name,
+        params=params,
+        model=model,
+        f1=f1,
+    )
+
+    # Log en remoto (si existe y es distinto del local)
+    if remote_uri and remote_uri != local_uri:
+        log_single_run(
+            tracking_uri=remote_uri,
+            run_name=run_name,
+            params=params,
+            model=model,
+            f1=f1,
+        )
+
+
+def main() -> None:
     # Algunos conjuntos de hiperparámetros de ejemplo
     param_grid: List[Dict[str, Any]] = [
         {"n_estimators": 200, "max_depth": 5, "learning_rate": 0.10},
@@ -118,8 +169,9 @@ def main():
 
     for idx, params in enumerate(param_grid):
         run_name = f"nanu_run_{idx:03d}"
-        train_and_log_model(run_name=run_name, params=params, author="Nadia")
+        train_and_log_model_mirrored(run_name=run_name, params=params)
 
 
 if __name__ == "__main__":
     main()
+
