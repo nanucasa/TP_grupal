@@ -1,118 +1,150 @@
+# tp_grupal_dagster/definitions.py
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+from typing import Dict, Optional, Any
+
 from dagster import (
-    Definitions,
-    load_assets_from_modules,
-    fs_io_manager,
     AssetSelection,
-    define_asset_job,
-    sensor,
+    Definitions,
     RunRequest,
+    SkipReason,
     SensorEvaluationContext,
+    define_asset_job,
+    load_assets_from_modules,
+    sensor,
 )
 
-import mlflow
+from mlflow.tracking import MlflowClient
 
 from . import assets
 
-# -------------------------------------------------------------------
-# Configuración del experimento / métrica de champion
-# -------------------------------------------------------------------
-EXPERIMENT_NAME = "telco_churn_tune_xgb"
-METRIC_NAME = "f1"
 
-# -------------------------------------------------------------------
-# Assets
-# -------------------------------------------------------------------
+# ============================================================
+# Helpers compartidos con el sensor
+# ============================================================
+
+def _get_mlflow_client() -> MlflowClient:
+    """
+    Devuelve un MlflowClient usando MLFLOW_TRACKING_URI si está seteado.
+    Si no, cae por defecto a .../mlruns relativo al repo.
+    """
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
+    if not tracking_uri:
+        project_root = Path(__file__).resolve().parents[2]
+        tracking_uri = f"file:///{project_root / 'mlruns'}"
+    return MlflowClient(tracking_uri=tracking_uri)
+
+
+def _load_local_champion(path: Path) -> Optional[Dict[str, Any]]:
+    """
+    Carga el champion local desde el JSON en artifacts.
+    Devuelve None si no existe o si hay error al leerlo.
+    """
+    if not path.exists():
+        return None
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _is_new_champion(
+    remote_best: Dict[str, Any],
+    local: Optional[Dict[str, Any]],
+) -> bool:
+    """
+    True si el run_id remoto es distinto al run_id del champion local,
+    o si no hay champion local.
+    """
+    if local is None:
+        return True
+    return remote_best.get("run_id") != local.get("run_id")
+
+
+# ============================================================
+# Dagster assets + job
+# ============================================================
+
+# Cargamos todos los assets definidos en assets.py
 all_assets = load_assets_from_modules([assets])
 
 # Job que ejecuta SOLO el flujo de champion
 champion_job = define_asset_job(
     name="champion_job",
-    selection=AssetSelection.assets(
-        assets.select_champion_from_mlflow,
-        assets.persist_champion_json,
-        assets.set_mlflow_champion_alias,
+    selection=AssetSelection.keys(
+        "select_champion_from_mlflow",
+        "persist_champion_json",
+        "set_mlflow_champion_alias",
     ),
 )
 
-# -------------------------------------------------------------------
+
+# ============================================================
 # Sensor: lanza champion_job SOLO cuando cambia el champion en MLflow
-# -------------------------------------------------------------------
+# ============================================================
+
 @sensor(job=champion_job)
 def champion_sensor(context: SensorEvaluationContext):
     """
     Sensor que:
-    - Busca el mejor run por METRIC_NAME en el experimento EXPERIMENT_NAME.
-    - Compara su run_id con context.cursor.
-    - Si cambió, dispara el job y actualiza el cursor.
+    - Consulta MLflow y obtiene el mejor run por METRIC_NAME del experimento EXPERIMENT_NAME.
+    - Compara su run_id con el champion local guardado en artifacts/champion_metadata.json.
+    - Si cambió, dispara el job de assets de champion.
     """
 
-    client = mlflow.tracking.MlflowClient()
+    # Mejor run actual en MLflow
+    client = _get_mlflow_client()
+    remote_best = assets._get_best_run_from_mlflow(client)  # reutilizamos lógica de assets
 
-    # 1) Buscar experimento en MLflow
-    experiment = client.get_experiment_by_name(EXPERIMENT_NAME)
-    if experiment is None:
-        context.log.warning(
-            f"Experimento '{EXPERIMENT_NAME}' no encontrado en MLflow. "
-            "El sensor no disparará el job."
-        )
-        return
+    context.log.info("Mejor run actual en MLflow:")
+    context.log.info(json.dumps(remote_best, indent=2, ensure_ascii=False))
 
-    # 2) Buscar mejor run por métrica
-    runs = client.search_runs(
-        [experiment.experiment_id],
-        order_by=[f"metrics.{METRIC_NAME} DESC"],
-        max_results=1,
-    )
-
-    if not runs:
+    # Champion local (JSON en artifacts)
+    local_champion = _load_local_champion(assets.CHAMPION_METADATA_PATH)
+    if local_champion is None:
         context.log.info(
-            f"No hay runs en el experimento '{EXPERIMENT_NAME}'. "
-            "El sensor no disparará el job."
+            f"No existe {assets.CHAMPION_METADATA_PATH}, no hay champion local guardado."
         )
-        return
+    else:
+        context.log.info("Champion local actual:")
+        context.log.info(json.dumps(local_champion, indent=2, ensure_ascii=False))
 
-    best_run = runs[0]
-    best_run_id = best_run.info.run_id
-    best_metric = best_run.data.metrics.get(METRIC_NAME)
-
-    last_seen_run_id = context.cursor  # puede ser None la primera vez
-
-    # 3) Si el champion no cambió, no hacemos nada
-    if last_seen_run_id == best_run_id:
+    # ¿Hay nuevo champion?
+    if not _is_new_champion(remote_best, local_champion):
         context.log.info(
-            f"Champion sin cambios "
-            f"(run_id={best_run_id}, {METRIC_NAME}={best_metric:.4f}). "
-            "No se dispara champion_job."
+            "No se detectó un nuevo champion. El sensor no disparará ningún job."
         )
+        yield SkipReason("No hay nuevo champion en MLflow.")
         return
 
-    # 4) Nuevo champion detectado -> disparamos el job y actualizamos cursor
+    # Nuevo champion -> disparamos el job
     context.log.info(
-        f"Nuevo champion detectado: run_id={best_run_id}, "
-        f"{METRIC_NAME}={best_metric:.4f}. "
-        f"Anterior run_id visto: {last_seen_run_id!r}. "
-        "Se dispara champion_job."
+        f"Nuevo champion detectado: run_id={remote_best['run_id']}, "
+        f"{assets.METRIC_NAME}={remote_best['metric_value']}"
     )
+    context.log.info("El sensor disparará materialización de assets de champion.")
 
-    # Actualizamos cursor ANTES de lanzar el run para evitar duplicados
-    context.update_cursor(best_run_id)
-
-    # 5) Disparar run del job
+    # Disparamos el job de assets de champion
     yield RunRequest(
-        run_key=best_run_id,  # evita correr dos veces para el mismo champion
+        run_key=remote_best["run_id"],
         tags={
-            "mlflow_experiment": EXPERIMENT_NAME,
-            "mlflow_champion_run_id": best_run_id,
+            "mlflow_experiment_id": remote_best["experiment_id"],
+            "mlflow_run_id": remote_best["run_id"],
         },
     )
 
 
-# -------------------------------------------------------------------
-# Definitions de Dagster
-# -------------------------------------------------------------------
+# ============================================================
+# Definitions raíz para Dagster
+# ============================================================
+
 defs = Definitions(
     assets=all_assets,
     jobs=[champion_job],
     sensors=[champion_sensor],
-    resources={"io_manager": fs_io_manager},
 )

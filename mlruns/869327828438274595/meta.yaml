@@ -1,6 +1,0 @@
-artifact_location: file:///C:/dvc_prueba/mlruns/869327828438274595
-creation_time: 1761599763330
-experiment_id: '869327828438274595'
-last_update_time: 1761599763330
-lifecycle_stage: active
-name: telco_churn_tune

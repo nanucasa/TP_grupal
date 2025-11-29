@@ -1,176 +1,161 @@
-import os
-import json
+# tp_grupal_dagster/assets.py
 
-import mlflow
+from __future__ import annotations
+
+from dagster import asset, AssetIn
+from pathlib import Path
+from typing import Dict, Any
+import json
+import os
+
 from mlflow.tracking import MlflowClient
 from mlflow.exceptions import MlflowException
 
-from dagster import asset, AssetExecutionContext
 
-# ---------------------------------------------------------------------
-# Constantes del proyecto
-# ---------------------------------------------------------------------
+# ============================================================
+# Constantes y paths compartidos
+# ============================================================
 
+# Raíz del proyecto Dagster: C:\dvc_prueba\tp_grupal_dagster
+BASE_DIR = Path(__file__).resolve().parents[1]
+
+ARTIFACTS_DIR = BASE_DIR / "artifacts"
+ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Archivo donde guardamos el champion local
+CHAMPION_METADATA_PATH = ARTIFACTS_DIR / "champion_metadata.json"
+
+# Configuración del experimento / métrica de champion
 EXPERIMENT_NAME = "telco_churn_tune_xgb"
 MODEL_NAME = "TelcoChurn_XGB"
 METRIC_NAME = "f1"
 
-# Ruta al repo raíz: .../C:/dvc_prueba
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-# Carpeta y archivo donde guardamos la info del champion
-ARTIFACTS_DIR = os.path.join(REPO_ROOT, "artifacts")
-CHAMPION_JSON_PATH = os.path.join(ARTIFACTS_DIR, "champion_from_mlflow.json")
+# ============================================================
+# Helpers internos
+# ============================================================
+
+def _get_mlflow_client() -> MlflowClient:
+    """
+    Devuelve un MlflowClient usando MLFLOW_TRACKING_URI si está seteado.
+    Si no, cae por defecto a .../mlruns relativo al repo.
+    """
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
+    if not tracking_uri:
+        project_root = Path(__file__).resolve().parents[2]
+        tracking_uri = f"file:///{project_root / 'mlruns'}"
+    return MlflowClient(tracking_uri=tracking_uri)
 
 
-# ---------------------------------------------------------------------
-# 1) Buscar champion en MLflow
-# ---------------------------------------------------------------------
-
-
-@asset
-def select_champion_from_mlflow(context: AssetExecutionContext) -> dict:
+def _get_best_run_from_mlflow(client: MlflowClient) -> Dict[str, Any]:
     """
     Busca en MLflow el mejor run del experimento definido en EXPERIMENT_NAME,
     ordenando por la métrica METRIC_NAME (f1).
     Devuelve un dict con toda la info relevante del champion.
     """
-    tracking_uri = mlflow.get_tracking_uri()
-    context.log.info(f"Usando MLflow tracking URI: {tracking_uri}")
-
-    client = MlflowClient()
-
     experiment = client.get_experiment_by_name(EXPERIMENT_NAME)
     if experiment is None:
-        msg = f"No se encontró el experimento '{EXPERIMENT_NAME}' en MLflow."
-        context.log.error(msg)
-        raise RuntimeError(msg)
+        raise RuntimeError(
+            f"Experimento '{EXPERIMENT_NAME}' no encontrado en MLflow."
+        )
 
     runs = client.search_runs(
         experiment_ids=[experiment.experiment_id],
-        filter_string="attributes.status = 'FINISHED'",
+        filter_string=f"metrics.{METRIC_NAME} > 0",
         order_by=[f"metrics.{METRIC_NAME} DESC"],
         max_results=1,
     )
 
     if not runs:
-        msg = (
-            f"No se encontraron runs finalizados en el experimento "
-            f"'{EXPERIMENT_NAME}'."
+        raise RuntimeError(
+            f"No se encontraron runs válidos para el experimento '{EXPERIMENT_NAME}'."
         )
-        context.log.error(msg)
-        raise RuntimeError(msg)
 
-    best_run = runs[0]
-    best_run_id = best_run.info.run_id
-    best_metric = best_run.data.metrics.get(METRIC_NAME)
+    run = runs[0]
+    metric_value = run.data.metrics.get(METRIC_NAME)
 
-    context.log.info(
-        f"Champion encontrado: run_id={best_run_id}, "
-        f"{METRIC_NAME}={best_metric:.4f}"
-    )
-
-    result = {
+    return {
         "experiment_name": EXPERIMENT_NAME,
-        "experiment_id": experiment.experiment_id,
-        "run_id": best_run_id,
+        "experiment_id": run.info.experiment_id,
+        "run_id": run.info.run_id,
         "model_name": MODEL_NAME,
         "metric_name": METRIC_NAME,
-        "metric_value": best_metric,
+        "metric_value": metric_value,
     }
 
-    return result
 
-
-# ---------------------------------------------------------------------
-# 2) Persistir la info del champion en artifacts/champion_from_mlflow.json
-# ---------------------------------------------------------------------
-
+# ============================================================
+# Asset 1: elegir champion desde MLflow
+# ============================================================
 
 @asset
-def persist_champion_json(
-    context: AssetExecutionContext,
-    select_champion_from_mlflow: dict,
-) -> None:
+def select_champion_from_mlflow() -> Dict[str, Any]:
     """
-    Guarda el resultado de select_champion_from_mlflow en un JSON dentro de
-    artifacts/champion_from_mlflow.json (en el repo raíz C:/dvc_prueba).
+    Consulta MLflow y devuelve la metadata del mejor run del experimento.
     """
-    os.makedirs(ARTIFACTS_DIR, exist_ok=True)
-
-    with open(CHAMPION_JSON_PATH, "w", encoding="utf-8") as f:
-        json.dump(select_champion_from_mlflow, f, indent=2)
-
-    context.log.info(
-        f"Champion guardado en '{CHAMPION_JSON_PATH}': "
-        f"{json.dumps(select_champion_from_mlflow, indent=2)}"
-    )
+    client = _get_mlflow_client()
+    best = _get_best_run_from_mlflow(client)
+    return best
 
 
-# ---------------------------------------------------------------------
-# 3) Intentar actualizar el alias 'champion' en la Model Registry
-# ---------------------------------------------------------------------
+# ============================================================
+# Asset 2: persistir champion en JSON local
+# ============================================================
 
-
-@asset
-def set_mlflow_champion_alias(
-    context: AssetExecutionContext,
-    select_champion_from_mlflow: dict,
-) -> None:
+@asset(ins={"champion": AssetIn(key="select_champion_from_mlflow")})
+def persist_champion_json(champion: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Usa la info del champion para buscar la versión registrada del modelo
-    MODEL_NAME con ese run_id y, si la encuentra, intenta ponerle el alias
-    'champion'.
-
-    Si el servidor de MLflow no permite actualizar aliases (por ejemplo,
-    DagsHub devolviendo 403) se deja un warning en logs pero NO se rompe
-    el pipeline.
+    Guarda el champion en artifacts/champion_metadata.json.
+    Este JSON es el que usa el sensor para saber cuál es el último champion persistido.
     """
-    tracking_uri = mlflow.get_tracking_uri()
-    context.log.info(
-        f"Intentando actualizar alias 'champion' en tracking URI: {tracking_uri}"
-    )
+    CHAMPION_METADATA_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    client = MlflowClient()
-    run_id = select_champion_from_mlflow["run_id"]
+    with CHAMPION_METADATA_PATH.open("w", encoding="utf-8") as f:
+        json.dump(champion, f, indent=2, ensure_ascii=False)
 
-    # 1) Buscar la versión de MODEL_NAME que corresponde a ese run_id
+    return champion
+
+
+# ============================================================
+# Asset 3: setear alias 'champion' en el Model Registry de MLflow
+# ============================================================
+
+@asset(ins={"champion": AssetIn(key="persist_champion_json")})
+def set_mlflow_champion_alias(champion: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Asigna el alias 'champion' en el Model Registry de MLflow
+    a la versión asociada al run campeón. Si no encuentra una versión
+    registrada para ese run, la ejecución no falla.
+    """
+    client = _get_mlflow_client()
+
+    model_name = champion["model_name"]
+    run_id = champion["run_id"]
+
     try:
-        model_versions = client.search_model_versions(f"name = '{MODEL_NAME}'")
-    except MlflowException as e:
-        context.log.warning(
-            f"No se pudieron leer las versiones registradas para el modelo "
-            f"'{MODEL_NAME}'. Se omite la actualización del alias. "
-            f"Detalle técnico: {e}"
-        )
-        return
+        versions = client.search_model_versions(f"name='{model_name}'")
+    except MlflowException:
+        # Si no hay registry o falla la búsqueda, no rompemos el pipeline.
+        return champion
 
-    target_version = None
-    for mv in model_versions:
-        if getattr(mv, "run_id", None) == run_id:
-            target_version = mv.version
+    target_version: str | None = None
+    for v in versions:
+        if v.run_id == run_id:
+            target_version = v.version
             break
 
     if target_version is None:
-        context.log.warning(
-            f"No se encontró versión registrada de '{MODEL_NAME}' con "
-            f"run_id={run_id}. Registra el modelo desde ese run en la UI de "
-            f"MLflow y vuelve a ejecutar este asset si quieres tener alias."
-        )
-        return
+        # No encontramos una versión del modelo registrada con ese run_id.
+        return champion
 
-    # 2) Intentar actualizar el alias 'champion'
+    # Intentamos setear alias 'champion'; si falla, no rompemos el pipeline.
     try:
-        client.set_registered_model_alias(MODEL_NAME, "champion", target_version)
-        context.log.info(
-            f"Alias 'champion' actualizado a {MODEL_NAME} v{target_version} "
-            f"(run_id={run_id})."
+        client.set_registered_model_alias(
+            name=model_name,
+            alias="champion",
+            version=target_version,
         )
-    except MlflowException as e:
-        context.log.warning(
-            "La llamada a la API de MLflow para actualizar el alias 'champion' "
-            "falló (por ejemplo, error 403 en DagsHub). "
-            "El pipeline continúa sin alias automático. "
-            f"Detalle técnico: {e}"
-        )
-        return
+    except MlflowException:
+        pass
+
+    return champion
