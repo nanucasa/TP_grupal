@@ -1,0 +1,8 @@
+{
+  "experiment_name": "telco_churn_tune_xgb",
+  "experiment_id": "244810635909732049",
+  "run_id": "ef5076d7123f4fce8bad7c1edf66482b",
+  "model_name": "TelcoChurn_XGB",
+  "metric_name": "f1",
+  "metric_value": 0.71
+}
