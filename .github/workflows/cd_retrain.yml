@@ -1,0 +1,54 @@
+name: CD - Retrain model and push to Dagshub
+
+on:
+  # Lo podés disparar a mano desde la pestaña "Actions" (Run workflow)
+  workflow_dispatch:
+  # Y también automáticamente cuando cambie código de modelo / pipeline
+  push:
+    branches: [ main ]
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "params.yaml"
+      - "dvc.yaml"
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+
+    env:
+      # Secrets definidos en GitHub → Settings → Secrets and variables → Actions
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+      DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+      DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Configure DVC remote to use Dagshub (with secrets)
+        run: |
+          dvc remote modify dagshub url https://$DAGSHUB_USERNAME:$DAGSHUB_TOKEN@dagshub.com/nanucasa/TP_grupal.dvc
+          dvc remote default dagshub
+
+      - name: Pull data and artifacts from DVC
+        run: |
+          dvc pull
+
+      - name: Retrain model and log to MLflow (Dagshub)
+        run: |
+          python scripts/base_scripts_runs.py
+
+      - name: Push updated data/models to DVC remote
+        run: |
+          dvc push
+        continue-on-error: true
