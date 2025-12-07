@@ -1,17 +1,8 @@
 name: CD - Retrain model and push to Dagshub
 
 on:
-  # Lo podés disparar a mano desde la pestaña "Actions"
+  # Se dispara a mano desde la pestaña "Actions" (Run workflow)
   workflow_dispatch:
-
-  # Opcional: también cuando cambian cosas del modelo/pipeline en main
-  push:
-    branches: [ main ]
-    paths:
-      - "src/**"
-      - "scripts/**"
-      - "params.yaml"
-      - "dvc.yaml"
 
 jobs:
   retrain:
@@ -23,7 +14,7 @@ jobs:
       MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
       MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
 
-      # Para DVC remoto en Dagshub
+      # DVC remoto en Dagshub
       DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
 
@@ -49,18 +40,20 @@ jobs:
       - name: Pull data and artifacts from DVC
         run: |
           dvc pull
+        continue-on-error: true
 
-      # Sanity-check: loguear 1 run mínimo para validar MLflow remoto
+      # Sanity check: verifica que realmente podamos loguear en MLflow remoto
       - name: Sanity check MLflow logging
         run: |
           python - << "EOF"
-          import mlflow, os
+          import mlflow
           print("Tracking URI:", mlflow.get_tracking_uri())
           mlflow.set_experiment("ci_cd_sanity")
           with mlflow.start_run(run_name="gh_actions_smoke"):
               mlflow.log_metric("test_metric", 1.23)
           EOF
 
+      # Aquí es donde se generan los runs "reales" (local + Dagshub)
       - name: Retrain model and log to MLflow (Dagshub)
         run: |
           python scripts/base_scripts_runs.py

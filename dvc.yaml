@@ -1,26 +1,73 @@
 stages:
   data_prep:
-    desc: Prepara datasets (train/valid/test) desde el CSV crudo
-    cmd: python src\data_prep.py --input data\raw\telco_churn.csv --outdir data\processed --seed 42 --test-size 0.2 --val-size 0.1
+    cmd: python src/data_prep.py --input data/raw/telco_churn.csv --outdir data/processed --seed 42 --test-size 0.2 --val-size 0.1
     deps:
       - src/data_prep.py
       - data/raw/telco_churn.csv
     outs:
-      - data/processed
-
-  train:
-    desc: Entrena el modelo de churn con los datos procesados
-    cmd: python src\train.py --train data\processed\train.csv --valid data\processed\valid.csv --out-model models\model.joblib --metrics metrics.json --params params.yaml
-    deps:
-      - src/train.py
       - data/processed/train.csv
       - data/processed/valid.csv
-      - params.yaml
-    params:
-      - train.C
-      - train.max_iter
-      - train.seed
+      - data/processed/test.csv
+      - data/processed/features.json
+
+  fe:
+    cmd: python src/feature_engineering.py --input data/processed/train.csv --output data/processed/train_fe.csv --test data/processed/test.csv --val data/processed/valid.csv
+    deps:
+      - src/feature_engineering.py
+      - data/processed/train.csv
+      - data/processed/test.csv
+      - data/processed/valid.csv
     outs:
-      - models/model.joblib
+      - data/processed/train_fe.csv
+      - data/processed/test_fe.csv
+      - data/processed/valid_fe.csv
+
+  train_rf:
+    cmd: python src/train_rf.py --config params.yaml
+    deps:
+      - src/train_rf.py
+      - params.yaml
+      - data/processed/train_fe.csv
+      - data/processed/test_fe.csv
+      - data/processed/valid_fe.csv
+    outs:
+      - models/model_rf.joblib
     metrics:
-      - metrics.json
+      - metrics/metrics_rf.json:
+          cache: false
+
+  train_xgb:
+    cmd: python src/train_xgb.py --config params.yaml
+    deps:
+      - src/train_xgb.py
+      - params.yaml
+      - data/processed/train_fe.csv
+      - data/processed/test_fe.csv
+      - data/processed/valid_fe.csv
+    outs:
+      - models/model_xgb.joblib
+    metrics:
+      - metrics/metrics_xgb.json:
+          cache: false
+
+  benchmark:
+    cmd: python src/benchmark.py
+    deps:
+      - src/benchmark.py
+      - models/model_rf.joblib
+      - models/model_xgb.joblib
+      - metrics/metrics_rf.json
+      - metrics/metrics_xgb.json
+    outs:
+      - reports/benchmark.md
+      - reports/f1_bench.png
+
+  select:
+    cmd: python src/select_model.py
+    deps:
+      - src/select_model.py
+      - metrics/metrics_rf.json
+      - metrics/metrics_xgb.json
+    outs:
+      - models/best_model.joblib
+      - artifacts/champion_run.json
