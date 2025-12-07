@@ -48,3 +48,5 @@ git/
 
 # Permitir archivos .dvc dentro de artifacts/
 !tp_grupal_dagster/artifacts/*.dvc"git/" 
+.vscode/
+dvc_prueba.code-workspace
