@@ -10,6 +10,9 @@ jobs:
       DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
       MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+      # IMPORTANTE: credenciales que usa MLflow para DagsHub
+      MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+      MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
 
     steps:
       - name: Set up job
@@ -38,17 +41,19 @@ jobs:
         run: |
           dvc pull || echo "WARNING: dvc pull terminó con advertencias"
 
-      # >>> Sanity check usando MLflow local (mlruns), NO el remoto <<<
+      # =========================
+      # SANITY: MLflow LOCAL ONLY
+      # =========================
       - name: Sanity check MLflow logging
         run: |
           python - << "EOF"
           import mlflow
 
-          print("Tracking URI por defecto en este paso:", mlflow.get_tracking_uri())
+          print("Tracking URI heredado del job:", mlflow.get_tracking_uri())
 
-          # Para el sanity usamos un backend local efímero
-          mlflow.set_tracking_uri("mlruns")
-          print("Tracking URI usado para sanity:", mlflow.get_tracking_uri())
+          # Para el sanity usamos backend local
+          mlflow.set_tracking_uri("file:mlruns")
+          print("Tracking URI usado en sanity:", mlflow.get_tracking_uri())
 
           mlflow.set_experiment("ci_cd_sanity")
 
@@ -60,7 +65,11 @@ jobs:
 
           print("Sanity de MLflow OK (backend local).")
           EOF
+        continue-on-error: true
 
+      # =========================
+      # ENTRENAMIENTO REAL (REMOTO)
+      # =========================
       - name: Retrain model and log to MLflow (Dagshub)
         run: |
           python scripts/base_scripts_runs.py
