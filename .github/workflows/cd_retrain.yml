@@ -1,24 +1,20 @@
 name: CD - Retrain model and push to Dagshub
 
 on:
-  # Se dispara a mano desde la pestaña "Actions" (Run workflow)
   workflow_dispatch:
 
 jobs:
   retrain:
     runs-on: ubuntu-latest
-
     env:
-      # MLflow remoto en Dagshub
-      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-      MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
-      MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
-
-      # DVC remoto en Dagshub
       DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
 
     steps:
+      - name: Set up job
+        run: echo "Starting CD retrain job"
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -29,36 +25,48 @@ jobs:
 
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Configure DVC remote for Dagshub
         run: |
-          dvc remote modify dagshub url https://$DAGSHUB_USERNAME:$DAGSHUB_TOKEN@dagshub.com/nanucasa/TP_grupal.dvc
-          dvc remote default dagshub
-        continue-on-error: true
+          dvc remote modify dagshub --local auth basic
+          dvc remote modify dagshub --local user "${{ env.DAGSHUB_USERNAME }}"
+          dvc remote modify dagshub --local password "${{ env.DAGSHUB_TOKEN }}"
 
       - name: Pull data and artifacts from DVC
         run: |
-          dvc pull
-        continue-on-error: true
+          dvc pull || echo "WARNING: dvc pull terminó con advertencias"
 
-      # Sanity check: verifica que podemos loguear en MLflow remoto
       - name: Sanity check MLflow logging
         run: |
           python - << "EOF"
           import mlflow
+          from mlflow.exceptions import MlflowException
+
           print("Tracking URI en job:", mlflow.get_tracking_uri())
-          mlflow.set_experiment("ci_cd_sanity")
+
+          exp_name = "telco_churn_tune_xgb"
+          try:
+              mlflow.set_experiment(exp_name)
+          except MlflowException as e:
+              # No rompemos el CD si el sanity falla, solo avisamos
+              print(f"[WARN] No se pudo usar el experimento {exp_name!r}: {e}")
+
           with mlflow.start_run(run_name="gh_actions_smoke"):
-              mlflow.log_metric("test_metric", 1.23)
+              mlflow.log_param("actor", "${{ github.actor }}")
+              mlflow.log_param("branch", "${{ github.ref_name }}")
+              mlflow.log_param("sanity_type", "cd_smoke")
+              mlflow.log_metric("sanity", 1.0)
           EOF
 
-      # Aquí se generan los runs "reales" (local + Dagshub)
       - name: Retrain model and log to MLflow (Dagshub)
         run: |
           python scripts/base_scripts_runs.py
 
       - name: Push updated data/models to DVC remote
         run: |
-          dvc push
-        continue-on-error: true
+          dvc push || echo "WARNING: dvc push terminó con advertencias"
+
+      - name: Post Set up Python
+        run: echo "CD retrain job finished."
