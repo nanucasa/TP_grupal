@@ -17,12 +17,14 @@
 - 4- Visualización y automatización de selección de modelo campeón con Dagster.
 
 ## 🎯 Objetivos
+Predecir la baja de clientes de una telco (churn) usando modelos de Machine Learning y armar un flujo reproducible de:
 
 - Construir un pipeline de ML completamente reproducible.
-- Aplicar control de versiones con DVC y Git.
+- Versionado de datos y modelos en **DagsHub** (DVC + MLflow Registry)
+- Preparación de datos con **DVC**  
 - Trackear experimentos y modelos con MLflow (DagsHub).
-- Orquestar, visualizar y automatizar la selección del modelo campeón con Dagster.
-- Implementar CI/CD con GitHub Actions para validar el pipeline.
+- Orquestación y elección de modelo campeón con **Dagster**  
+- **CI** y **CD** en **GitHub Actions**  
 - Seleccionar de forma sistemática un modelo campeón según F1.
 
 ## 🛠️ Tecnologías Utilizadas
@@ -84,15 +86,23 @@
 **Sincronizar datos versionados desde DagsHub**
 - dvc pull
 
-**Ejecutar el pipeline de punta a punta con DVC (data prep + train)**
-- dvc repro train
+**Ejecutar la preparación de datos con DVC (solo data prep)**  
+- `dvc repro data_prep`
 
 Esto:
-- Toma data/raw/telco_churn.csv
-- Genera data/processed/train.csv y data/processed/valid.csv
-- Entrena el modelo y guarda models/model.joblib
-- Genera metrics.json y gráficos en reports/
-- Loguea el experimento y el modelo en MLflow remoto en DagsHub (tracking URI: https://dagshub.com/nanucasa/TP_grupal.mlflow).
+- Toma `data/raw/telco_churn.csv`.
+- Genera `data/processed/train.csv`, `data/processed/valid.csv`,
+  `data/processed/test.csv` y `data/processed/features.json`.
+
+**Entrenar el modelo y loguear en MLflow (local + remoto)**  
+- `python scripts/base_scripts_runs.py`
+
+Esto:
+- Usa los CSV de `data/processed/`.
+- Entrena el modelo XGBoost (`TelcoChurn_XGB`).
+- Registra un run en el experimento `telco_churn_tune_xgb`.
+- Registra/actualiza el modelo `TelcoChurn_XGB` en el Model Registry remoto de DagsHub
+  y gestiona el alias `champion`.
 
 **Ver resultados en DagsHub / MLflow (tracking remoto)**
 - Ir al repo en DagsHub.
@@ -130,45 +140,66 @@ Desde allí se visualizan los assets, el sensor champion_sensor y el modelo camp
 - ├── reports/ # Gráficos (ROC, PR)
 - ├── params.yaml # Parámetros del modelo
 - ├── dvc.yaml # Definición del pipeline
+- ├── dvc.yaml
+- ├── dvc.lock
+- ├── params.yaml
 - ├── requirements.txt
+- └── .github/
+-     └── workflows/
+-        ├── ci.yml
+-        └── cd_retrain.yml
 - └── README.md
 
 ## 🔄 Pipeline de Trabajo (DVC)
-**Stage 1 – data_prep**
-Script: src/data_prep.py
 
-- Funciones:
-- Carga del dataset crudo.
-- Limpieza, encoding y división en train/valid.
+### Stage 1 – `data_prep` (DVC)
 
-- Entradas:
-- data/raw/telco_churn.csv
-- params.yaml
-
-- Salidas:
-- data/processed/train.csv
-- data/processed/valid.csv
-
-**Este stage se ejecuta automáticamente cuando se corre:**
-- dvc repro train 
-- detecta si cambió el CSV o params.yaml.
-
-**Stage 2 – train**
-- Script: src/train.py
+**Script:** `src/data_prep.py`
 
 **Funciones:**
-- Entrena modelo LogisticRegression con StandardScaler.
-- Calcula métricas (accuracy, precision, recall, F1, ROC-AUC).
-- Loguea resultados en MLflow (local y remoto en DagsHub).
+- Carga del dataset crudo.
+- Limpieza / preprocesamiento.
+- Split en train / valid / test.
+- Generación del archivo `features.json` con la lista de features.
 
 **Entradas:**
-- data/processed/train.csv
-- data/processed/valid.csv
-- params.yaml
+- `data/raw/telco_churn.csv`
+- `params.yaml`
 
 **Salidas:**
-- models/model.joblib
-- metrics.json
+- `data/processed/train.csv`
+- `data/processed/valid.csv`
+- `data/processed/test.csv`
+- `data/processed/features.json`
+
+**Este stage se ejecuta automáticamente cuando se corre:**
+- `dvc repro data_prep`
+- o simplemente `dvc repro` (es el único stage actual del pipeline).
+
+### Stage 2 – Entrenamiento y logging (fuera de DVC)
+
+**Script:** `scripts/base_scripts_runs.py`
+
+**Funciones:**
+- Carga los datos de `data/processed/`.
+- Entrena el modelo XGBoost (`TelcoChurn_XGB`).
+- Calcula métricas (F1, accuracy, precision, recall, etc.).
+- Loguea resultados en MLflow local y remoto (DagsHub).
+- Registra y actualiza el modelo `TelcoChurn_XGB` en el Model Registry,
+  incluyendo la administración del alias `champion`.
+
+**Comando:**
+- python scripts/base_scripts_runs.py
+
+## 📚 Comandos útiles
+# Ver estado del pipeline
+- dvc status
+
+# Reproducir solo la preparación de datos
+- dvc repro data_prep
+
+# Ver el grafo del pipeline
+- dvc dag
 
 ## 📚 Guía rápida paso a paso (resumen)
 
@@ -182,27 +213,29 @@ Script: src/data_prep.py
 - Ejecutar dvc pull.
 
 **3- Ejecutar el pipeline completo**
-- Ejecutar dvc repro train.
+- Ejecutar `dvc repro data_prep`.
 
-**4- Verificar que se generen:**
-- data/processed/train.csv y valid.csv
-- models/model.joblib
-- metrics.json y gráficos en reports/
-- Ver experimentos en MLflow (DagsHub)
-- Ir al repo de DagsHub.
-- Abrir “Experiments” → experimento telco_churn_tune_xgb.
-- Ver los runs con sus métricas (F1, accuracy, etc.) y modelos registrados.
-- Monitoreo y automatización con Dagster
+**4- Entrenar el modelo y registrar experimentos**  
+- Ejecutar `python scripts/base_scripts_runs.py`.
 
-**5- Desde la raíz del proyecto de orquestación:**
-- cd tp_grupal_dagster
-- dagster dev
+**5- Verificar que se generen:**  
+- `data/processed/train.csv`, `valid.csv`, `test.csv`, `features.json`.  
+- Nuevos runs en el experimento `telco_churn_tune_xgb` en la pestaña **Experiments** de DagsHub.  
+- Nuevas versiones del modelo `TelcoChurn_XGB` en la pestaña **Models** de DagsHub, con el alias `champion` actualizado.
 
-**6- Abrir http://127.0.0.1:3000**
+**6- Monitoreo y automatización con Dagster**  
+- Desde la raíz del proyecto de orquestación:  
+  - `cd tp_grupal_dagster`  
+  - `dagster dev`  
 
-**7- Revisar:**
-- Assets de champion.
-- Sensor champion_sensor (detecta nuevo campeón).
+- Abrir `http://127.0.0.1:3000` y revisar:
+  - Assets de champion.  
+  - Sensor `champion_sensor` (detecta nuevo campeón).  
+
+**7- Confirmar modelo campeón:**  
+- Revisar `tp_grupal_dagster/artifacts/champion_metadata.json` (actualizado por Dagster a partir del MLflow remoto de DagsHub).  
+- Verificar en el Model Registry de DagsHub que la versión correspondiente de 
+  `TelcoChurn_XGB` tenga el alias `champion`.
 
 **8- Confirmar modelo campeón:**
 - Revisar artifacts/champion_metadata.json (actualizado por Dagster; siempre refleja el MLflow remoto de DagsHub).
@@ -264,15 +297,54 @@ dvc_prueba\tp_grupal_dagster\artifacts\champion_metadata.json
 ## 📈 Reproducibilidad y CI/CD
 
 **Comandos útiles DVC:**
-- dvc repro train
-- dvc dag
-- dvc status
-- dvc params diff
+- `dvc repro data_prep`
+- `dvc dag`
+- `dvc status`
 
-**Automatización GitHub Actions:**
-- Instala dependencias.
-- Ejecuta dvc pull y dvc repro.
-- Conecta con DagsHub usando secrets del repositorio.
+### Workflows de GitHub Actions
+
+**1) CI (`.github/workflows/ci.yml`)**
+
+- Se ejecuta en cada `push` y `pull_request` a la rama `main`.
+- Pasos principales:
+  - Checkout del repositorio.
+  - Configuración de Python 3.11.
+  - Instalación de dependencias desde `requirements.txt`.
+  - `dvc pull` usando los secrets de DagsHub (si falta algo en el remoto, el job no falla).
+  - Chequeo de sintaxis del código:
+
+    ```bash
+    python scripts/base_scripts_runs.py
+    ```
+
+  - Verificación del `MLFLOW_TRACKING_URI`
+    (imprime el valor de la variable de entorno y el `mlflow.get_tracking_uri()`).
+
+**2) CD – Retrain model and push to Dagshub (`.github/workflows/cd_retrain.yml`)**
+
+- Se dispara manualmente desde la pestaña **Actions** (`workflow_dispatch`).
+- Usa secrets del repo:
+  - `DAGSHUB_USERNAME`, `DAGSHUB_TOKEN`
+  - `MLFLOW_TRACKING_URI` (URL del tracking remoto en DagsHub).
+
+- Pasos principales:
+  - Checkout del repositorio.
+  - Configuración de Python 3.11.
+  - Instalación de dependencias.
+  - Configuración del remoto DVC apuntando a DagsHub y `dvc pull` (mejor esfuerzo).
+  - **Sanity check MLflow**: crea el experimento `ci_cd_sanity` y el run
+    `gh_actions_smoke` en el MLflow remoto para confirmar credenciales/URI.
+  - Ejecuta:
+
+    ```bash
+    python scripts/base_scripts_runs.py
+    ```
+
+    para reentrenar el modelo y loguear nuevos runs en el experimento
+    `telco_churn_tune_xgb`, además de actualizar el modelo `TelcoChurn_XGB`
+    y el alias `champion` en el Model Registry de DagsHub.
+  - `dvc push` para subir datos/artefactos versionados al remoto de DagsHub
+    (si falla, el workflow no se rompe).
 
 ## 🧩 Visualizaciones
 
