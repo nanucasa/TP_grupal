@@ -375,3 +375,6 @@ dvc_prueba\tp_grupal_dagster\artifacts\champion_metadata.json
 
 - Curso: Laboratorio de Minería de Datos – ISTEA
 - Año: 2025
+
+
+"Nota: esta sección fue editada desde la rama demo_cliente para la demo."
