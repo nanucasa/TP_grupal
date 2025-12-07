@@ -38,26 +38,27 @@ jobs:
         run: |
           dvc pull || echo "WARNING: dvc pull terminó con advertencias"
 
+      # >>> Sanity check usando MLflow local (mlruns), NO el remoto <<<
       - name: Sanity check MLflow logging
         run: |
           python - << "EOF"
           import mlflow
-          from mlflow.exceptions import MlflowException
 
-          print("Tracking URI en job:", mlflow.get_tracking_uri())
+          print("Tracking URI por defecto en este paso:", mlflow.get_tracking_uri())
 
-          exp_name = "telco_churn_tune_xgb"
-          try:
-              mlflow.set_experiment(exp_name)
-          except MlflowException as e:
-              # No rompemos el CD si el sanity falla, solo avisamos
-              print(f"[WARN] No se pudo usar el experimento {exp_name!r}: {e}")
+          # Para el sanity usamos un backend local efímero
+          mlflow.set_tracking_uri("mlruns")
+          print("Tracking URI usado para sanity:", mlflow.get_tracking_uri())
+
+          mlflow.set_experiment("ci_cd_sanity")
 
           with mlflow.start_run(run_name="gh_actions_smoke"):
               mlflow.log_param("actor", "${{ github.actor }}")
               mlflow.log_param("branch", "${{ github.ref_name }}")
-              mlflow.log_param("sanity_type", "cd_smoke")
+              mlflow.log_param("sanity_type", "cd_smoke_local")
               mlflow.log_metric("sanity", 1.0)
+
+          print("Sanity de MLflow OK (backend local).")
           EOF
 
       - name: Retrain model and log to MLflow (Dagshub)
