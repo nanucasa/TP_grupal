@@ -7,8 +7,14 @@ on:
     branches: [ main ]
 
 jobs:
-  syntax-check:
+  ci:
     runs-on: ubuntu-latest
+
+    env:
+      # Secrets configurados en GitHub → Settings → Secrets → Actions
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+      DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+      DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -19,6 +25,27 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      # Opcional: probar que podemos hablar con DVC/Dagshub.
+      # Asumo que tu remoto DVC se llama "dagshub" (como suele estar en .dvc/config).
+      # Si tiene otro nombre, se cambia aquí.
+      - name: DVC pull (usar secretos de Dagshub)
+        run: |
+          dvc remote modify dagshub url https://$DAGSHUB_USERNAME:$DAGSHUB_TOKEN@dagshub.com/nanucasa/TP_grupal.dvc
+          dvc pull
+        continue-on-error: true
+
       - name: Check Python syntax
         run: |
           python -m compileall src tp_grupal_dagster
+
+      - name: Verificar tracking URI de MLflow
+        run: |
+          python - << "EOF"
+          import os, mlflow
+          print("MLFLOW_TRACKING_URI (env):", os.environ.get("MLFLOW_TRACKING_URI"))
+          print("MLflow get_tracking_uri():", mlflow.get_tracking_uri())
+          EOF
