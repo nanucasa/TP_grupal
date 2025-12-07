@@ -11,10 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Secrets configurados en GitHub → Settings → Secrets → Actions
       MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-      DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
-      DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -29,14 +26,15 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      # Opcional: probar que podemos hablar con DVC/Dagshub.
-      # Asumo que tu remoto DVC se llama "dagshub" (como suele estar en .dvc/config).
-      # Si tiene otro nombre, se cambia aquí.
       - name: DVC pull (usar secretos de Dagshub)
+        env:
+          DAGSHUB_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         run: |
           dvc remote modify dagshub url https://$DAGSHUB_USERNAME:$DAGSHUB_TOKEN@dagshub.com/nanucasa/TP_grupal.dvc
+          dvc remote default dagshub
           dvc pull
-        continue-on-error: true
+        continue-on-error: true  # si falta algo en el remoto, NO rompe el CI
 
       - name: Check Python syntax
         run: |
@@ -46,13 +44,6 @@ jobs:
         run: |
           python - << "EOF"
           import os, mlflow
-          print("MLFLOW_TRACKING_URI (env):", os.environ.get("MLFLOW_TRACKING_URI"))
-          print("MLflow get_tracking_uri():", mlflow.get_tracking_uri())
+          print("MLFLOW_TRACKING_URI (env):", os.getenv("MLFLOW_TRACKING_URI"))
+          print("mlflow.get_tracking_uri():", mlflow.get_tracking_uri())
           EOF
-      - name: Ejecutar pipeline de entrenamiento con DVC (genera nuevos runs en MLflow)
-        env:
-          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-          MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USERNAME }}
-          MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
-        run: |
-          dvc repro train

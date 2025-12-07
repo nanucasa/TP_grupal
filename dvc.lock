@@ -1,8 +1,8 @@
 schema: '2.0'
 stages:
   data_prep:
-    cmd: python src\data_prep.py --input data\raw\telco_churn.csv --outdir 
-      data\processed --seed 42 --test-size 0.2 --val-size 0.1
+    cmd: python src/data_prep.py --input data/raw/telco_churn.csv --outdir 
+      data/processed --seed 42 --test-size 0.2 --val-size 0.1
     deps:
     - path: data/raw/telco_churn.csv
       hash: md5
@@ -13,16 +13,14 @@ stages:
       md5: aefaa2cac76a71bb4f666e6c300b1912
       size: 4989
     outs:
-    - path: data/processed
+    - path: data/processed/features.json
       hash: md5
-      md5: 614060690e60b1ab4f301e442dd7136f.dir
-      size: 1023708
-      nfiles: 4
-  train:
-    cmd: python src\train.py --train data\processed\train.csv --valid 
-      data\processed\valid.csv --out-model models\model.joblib --metrics 
-      metrics.json --params params.yaml
-    deps:
+      md5: 7ba481936f88d81fea6ed866772b410e
+      size: 741
+    - path: data/processed/test.csv
+      hash: md5
+      md5: 504c23a16229ee2680239bd7f5206d4c
+      size: 204688
     - path: data/processed/train.csv
       hash: md5
       md5: 8f5c35515f9f2ed31d9555ba58b1579b
@@ -31,25 +29,3 @@ stages:
       hash: md5
       md5: d33f3c1653cac4c9d9cc14227f77ee79
       size: 102550
-    - path: params.yaml
-      hash: md5
-      md5: 73a629cf0557f0ffa813496358bba4db
-      size: 1996
-    - path: src/train.py
-      hash: md5
-      md5: 639fcf34697e598f802a643b13c9f049
-      size: 7859
-    params:
-      params.yaml:
-        train.C: 10.0
-        train.max_iter: 1000
-        train.seed: 42
-    outs:
-    - path: metrics.json
-      hash: md5
-      md5: 01215ad27de48e363ac6d0c2332e378b
-      size: 224
-    - path: models/model.joblib
-      hash: md5
-      md5: 76c503b9e0807f761fef07c228889995
-      size: 1921
