@@ -135,12 +135,12 @@ Pygments==2.19.2
 pygtrie==2.5.0
 PyJWT==2.10.1
 pyparsing==3.2.5
-pyreadline3==3.5.4
+pyreadline3==3.5.4; sys_platform == "win32"   # <- solo en Windows
 pytest==9.0.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.1
 pytz==2025.2
-pywin32==311
+pywin32==311; sys_platform == "win32"         # <- solo en Windows
 PyYAML==6.0.3
 questionary==2.1.1
 requests==2.32.5
