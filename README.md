@@ -3,6 +3,8 @@
 - Proyecto MLOps de Predicción de Churn
 - Proyecto ISTEA | Materia: Laboratorio de Minería de Datos
 
+# esto es una nota para comprobar que el documento desde el branch del cliente ha sido subido satisfactoriamente por el PR
+
 ## 📋 Descripción del Proyecto
 
 - Pipeline reproducible de Machine Learning para predecir la rotación de clientes (churn) en una empresa de telefonía, aplicando buenas prácticas de MLOps con versionado de datos, tracking de experimentos y orquestación automatizada de assets.
