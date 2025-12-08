@@ -1,5 +1,7 @@
 # TP Grupal – Telco Churn
 
+# Esta es una prueba para comprobar que el clon y el Main funcionan correctamente.
+
 - Proyecto MLOps de Predicción de Churn
 - Proyecto ISTEA | Materia: Laboratorio de Minería de Datos
 
